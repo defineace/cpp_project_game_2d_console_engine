@@ -18,17 +18,6 @@ to a buffer and then to the console buffer.
 #include <thread>
 #include <chrono>
 
-int MAP_WIDTH = 100;
-int MAP_HEIGHT = 8;
-bool GAMEACTIVE = true;
-
-float PLAYER_XPOS = 10;
-float PLAYER_YPOS = 3;
-float PLAYER_SPEED = .075;
-
-float ENEMY_XPOS = 75;
-float ENEMY_YPOS = 3;
-
 class Enemy
 {
 private:
@@ -80,11 +69,22 @@ public:
     };
 };
 
+const int MAP_WIDTH = 100;
+const int MAP_HEIGHT = 8;
+
+bool GAMEACTIVE = true;
+
+float PLAYER_XPOS = 10;
+float PLAYER_YPOS = 3;
+float PLAYER_SPEED = .075;
+
+float ENEMY_XPOS = 75;
+float ENEMY_YPOS = 3;
+
 std::vector<Enemy*> ENEMIES;
 std::vector<Bullet*> PLAYER_BULLETS;
 
 void collisions(){
-    // Player Bullet
     if(PLAYER_BULLETS.size() > 0){
         for( int i=0; i<PLAYER_BULLETS.size(); i++){
             if( int(PLAYER_BULLETS[i]->return_bullet_xpos()) == MAP_WIDTH-5 ){
@@ -102,7 +102,7 @@ void collisions(){
     }
 
 
-}
+};
 
 void physics(){
     // Player Bullet
@@ -114,7 +114,7 @@ void physics(){
             PLAYER_BULLETS[i]->update_bullet_position( new_xPos,new_yPos );
         }
     }
-}
+};
 
 void input(){
     bool pressed = false;
@@ -163,30 +163,30 @@ void render(){
 
     COORD coord = { 0, 0 };
     SetConsoleCursorPosition( handle_console, coord);
-    
-    int buffer_gameboard[MAP_WIDTH][MAP_HEIGHT] = {0};
-    
-    // Write Buffer
-    // !!! You'll add items here, that need to be drawn
 
+    int buffer_map[MAP_WIDTH][MAP_HEIGHT] = {0};
+
+    // !!! You'll add items here, that need to be drawn !!! 
+
+    // Write Buffer
     for( int y=0; y<MAP_HEIGHT; y++){
         for( int x=0; x<MAP_WIDTH; x++){
 
             // Border
             if( x==0 || x==MAP_WIDTH-1 || y==0 || y==MAP_HEIGHT-1){
-                buffer_gameboard[x][y] = 1;
+                buffer_map[x][y] = 1;
             }
 
             // Player
             if( x==int(PLAYER_XPOS) && y==int(PLAYER_YPOS) ){
-                buffer_gameboard[x][y] = 2;
+                buffer_map[x][y] = 2;
             }
             
             // Player Bullet
             if(PLAYER_BULLETS.size() > 0){
                 for( int i=0; i<PLAYER_BULLETS.size(); i++){
                     if( x == int(PLAYER_BULLETS[i]->return_bullet_xpos()) && y == int(PLAYER_BULLETS[i]->return_bullet_ypos()) ){
-                        buffer_gameboard[x][y] = 3;
+                        buffer_map[x][y] = 3;
                     }
                 }
             }
@@ -195,7 +195,7 @@ void render(){
             if(ENEMIES.size() > 0){
                 for( int i=0; i<ENEMIES.size(); i++){
                     if( x == int(ENEMIES[i]->return_enemy_xpos()) && y == int(ENEMIES[i]->return_enemy_ypos()) ){
-                        buffer_gameboard[x][y] = 4;
+                        buffer_map[x][y] = 4;
                     }
                 }
             }
@@ -205,15 +205,15 @@ void render(){
     // Render Buffer
     for( int y=0; y<MAP_HEIGHT; y++){
         for( int x=0; x<MAP_WIDTH; x++){
-            if(buffer_gameboard[x][y] == 0){
+            if(buffer_map[x][y] == 0){
                 std::cout << ' ';
-            }else if(buffer_gameboard[x][y] == 1){
+            }else if(buffer_map[x][y] == 1){
                 std::cout << '#';
-            }else if(buffer_gameboard[x][y] == 2){
+            }else if(buffer_map[x][y] == 2){
                 std::cout << 'X';
-            }else if(buffer_gameboard[x][y] == 3){
+            }else if(buffer_map[x][y] == 3){
                 std::cout << '>';
-            }else if(buffer_gameboard[x][y] == 4){
+            }else if(buffer_map[x][y] == 4){
                 std::cout << '@';
             }
         }
