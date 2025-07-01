@@ -12,227 +12,294 @@ Gameobject can render within window bounds
 */
 #include <iostream>
 #include <windows.h>
-#include <vector>
-#include <cstdlib>
-#include <ctime>
 #include <thread>
 #include <chrono>
-// Original Draft
-class Enemy
+#include <cmath>
+#include <string>
+
+class Window
 {
 private:
-    int enemy_type;
-    float enemy_xPos;
-    float enemy_yPos;
+    int WINDOW_WIDTH;
+    int WINDOW_HEIGHT;
+
+    char** BUFFER_FRONT;
+    char** BUFFER_BACK;
+    bool BUFFERSWAP = true;
+
 public:
-    Enemy( float xPos, float yPos ){
-        enemy_xPos = xPos;
-        enemy_yPos = yPos;
+    Window(int width, int height){
+        WINDOW_WIDTH = width;
+        WINDOW_HEIGHT = height;
+
+        BUFFER_FRONT = new char*[WINDOW_WIDTH];
+        for (int i = 0; i < WINDOW_WIDTH; i++)
+            BUFFER_FRONT[i] = new char[WINDOW_HEIGHT];
+
+        BUFFER_BACK = new char*[WINDOW_WIDTH];
+        for (int i = 0; i < WINDOW_WIDTH; i++)
+            BUFFER_BACK[i] = new char[WINDOW_HEIGHT];
+
+        for(int y=0; y<WINDOW_HEIGHT; y++){
+            for(int x=0; x<WINDOW_WIDTH; x++){
+                BUFFER_BACK[x][y] = ' ';
+                BUFFER_FRONT[x][y] = ' ';
+            }
+        }
     };
 
-    void update_enemy_position( float xPos, float yPos ){
-        enemy_xPos = xPos;
-        enemy_yPos = yPos;
+    ~Window() {
+        for (int i = 0; i < WINDOW_WIDTH; i++)
+            delete[] BUFFER_FRONT[i];
+        delete[] BUFFER_FRONT;
+
+        for (int i = 0; i < WINDOW_WIDTH; i++)
+            delete[] BUFFER_BACK[i];
+        delete[] BUFFER_BACK;
     };
 
-    float return_enemy_xpos(){
-        return enemy_xPos;
+    void drawBorder(char character){
+        for( int y=0; y<WINDOW_HEIGHT; y++){
+            for( int x=0; x<WINDOW_WIDTH; x++){
+                if( x==0 || x==WINDOW_WIDTH-1 || y==0 || y==WINDOW_HEIGHT-1)
+                    if(BUFFERSWAP)             
+                        BUFFER_BACK[x][y] = character;
+                    else
+                        BUFFER_FRONT[x][y] = character;
+            }
+        }
     };
 
-    float return_enemy_ypos(){
-        return enemy_yPos;
+    void draw(int xPos,int yPos,char character){
+        if(BUFFERSWAP)             
+            BUFFER_BACK[xPos][yPos] = character;
+        else
+            BUFFER_FRONT[xPos][yPos] = character;
     };
+
+    void drawSquare(int xPos,int yPos,int width,int height,char character){
+        for(int y=yPos; y<yPos+height; y++){
+            for(int x=xPos; x<xPos+width; x++){ 
+                if(BUFFERSWAP)             
+                    BUFFER_BACK[x][y] = character;
+                else
+                    BUFFER_FRONT[x][y] = character;
+            }
+        }
+    };
+
+    void drawSprite(int xPos,int yPos,char sprite[5][5]){
+        for (int y = yPos; y < yPos + 5; y++) {
+            for (int x = xPos; x < xPos + 5; x++) {
+                if (x < 0 || x >= WINDOW_WIDTH || y < 0 || y >= WINDOW_HEIGHT)
+                    continue;
+                
+                int index_x = x - xPos;
+                int index_y = y - yPos;
+
+                if (BUFFERSWAP)             
+                    BUFFER_BACK[x][y] = sprite[index_y][index_x];
+                else
+                    BUFFER_FRONT[x][y] = sprite[index_y][index_x];
+            }
+        }
+    };
+
+    void buffer_clear(){
+        for(int y=0; y<WINDOW_HEIGHT; y++){
+            for(int x=0; x<WINDOW_WIDTH; x++){
+                if(BUFFERSWAP)
+                    BUFFER_BACK[x][y] = ' ';
+                else
+                    BUFFER_FRONT[x][y] = ' ';
+            }
+        }
+    };
+
+    void buffer_swap(){ BUFFERSWAP = !BUFFERSWAP; };
+
+    void render(){
+        HANDLE handle_console = GetStdHandle( STD_OUTPUT_HANDLE );
+
+        CONSOLE_CURSOR_INFO cursorInfo;
+        cursorInfo.dwSize = 100;
+        cursorInfo.bVisible = FALSE;
+        SetConsoleCursorInfo( handle_console, &cursorInfo);
+
+        COORD coord = { 0, 0 };
+        SetConsoleCursorPosition( handle_console, coord);
+
+        for(int y=0; y<WINDOW_HEIGHT; y++){
+            for(int x=0; x<WINDOW_WIDTH; x++){
+                if(BUFFERSWAP)
+                    std::cout << BUFFER_BACK[x][y];
+                else
+                    std::cout << BUFFER_FRONT[x][y];
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::flush;
+    };
+
+    int return_int_window_width(){ return WINDOW_WIDTH; };
+    int return_int_window_height(){ return WINDOW_HEIGHT; };
 };
 
-class Bullet
+class GameObject
 {
 private:
-    float bullet_xPos;
-    float bullet_yPos;
+    std::string OBJECT_LABEL;
+    float OBJECT_XPOS;
+    float OBJECT_YPOS;
+    char OBJECT_SPRITE;
+
 public:
-    Bullet(float xPos, float yPos){
-        bullet_xPos = xPos;
-        bullet_yPos = yPos;
+    GameObject(std::string label,float xPos,float yPos,char sprite){
+        OBJECT_LABEL = label;
+        OBJECT_XPOS = xPos;
+        OBJECT_YPOS = yPos;
+        OBJECT_SPRITE = sprite;
     };
 
-    void update_bullet_position(float xPos, float yPos){
-        bullet_xPos = xPos;
-        bullet_yPos = yPos;
-    };
+    void set_gameobject_xpos(float xPos){ OBJECT_XPOS = xPos; };
 
-    float return_bullet_xpos(){
-        return bullet_xPos;
-    };
+    void set_gameobject_ypos(float yPos){ OBJECT_YPOS = yPos; };
 
-    float return_bullet_ypos(){
-        return bullet_yPos;
-    };
+    void set_gameobject_sprite(char sprite){ OBJECT_SPRITE = sprite; };
+
+    float return_float_gameobject_xpos(){ return OBJECT_XPOS; };
+
+    float return_float_gameobject_ypos(){ return OBJECT_YPOS; };
+
+    int return_int_gameobject_xpos(){ return int(OBJECT_XPOS); };
+
+    int return_int_gameobject_ypos(){ return int(OBJECT_YPOS); };
+
+    char return_char_gameobject_sprite(){ return OBJECT_SPRITE; };
 };
 
-const int MAP_WIDTH = 100;
-const int MAP_HEIGHT = 8;
-
-bool GAMEACTIVE = true;
-
-float PLAYER_XPOS = 10;
-float PLAYER_YPOS = 3;
-float PLAYER_SPEED = .075;
-
-float ENEMY_XPOS = 75;
-float ENEMY_YPOS = 3;
-
-std::vector<Enemy*> ENEMIES;
-std::vector<Bullet*> PLAYER_BULLETS;
-
-void collisions(){
-    if(PLAYER_BULLETS.size() > 0){
-        for( int i=0; i<PLAYER_BULLETS.size(); i++){
-            if( int(PLAYER_BULLETS[i]->return_bullet_xpos()) == MAP_WIDTH-5 ){
-                delete PLAYER_BULLETS[i];
-                PLAYER_BULLETS.erase(PLAYER_BULLETS.begin() + i);
-            }else if(ENEMIES.size() > 0){
-                for( int e=0; e<ENEMIES.size(); e++){
-                    if( int(ENEMIES[e]->return_enemy_xpos()) == int(PLAYER_BULLETS[i]->return_bullet_xpos()) && int(ENEMIES[e]->return_enemy_ypos()) == int(PLAYER_BULLETS[i]->return_bullet_ypos()) ){
-                        delete ENEMIES[e];
-                        ENEMIES.erase(ENEMIES.begin() + e);
-                    }
-                }
-            }
-        }
-    }
-
-
-};
-
-void physics(){
-    // Player Bullet
-    if(PLAYER_BULLETS.size() > 0){
-        for( int i=0; i<PLAYER_BULLETS.size(); i++){
-            float bullet_speed = 0.25f;
-            float new_xPos = PLAYER_BULLETS[i]->return_bullet_xpos() + bullet_speed;
-            float new_yPos = PLAYER_BULLETS[i]->return_bullet_ypos();
-            PLAYER_BULLETS[i]->update_bullet_position( new_xPos,new_yPos );
-        }
-    }
-};
-
-void input(){
-    bool pressed = false;
-
-    // Quit Game
-    if(GetAsyncKeyState(VK_ESCAPE) & 0x8000){
-        GAMEACTIVE = false;
-    }
-
-    // Fire Bullet
-    if(GetAsyncKeyState(VK_SPACE) & 0x8000 && !pressed){
-        PLAYER_BULLETS.push_back(new Bullet(PLAYER_XPOS,PLAYER_YPOS));
-    }
-
-    // Spawn Enemy
-    if(GetAsyncKeyState(VK_DELETE) & 0x8000){
-        std::srand(static_cast<unsigned int>(std::time(0)));
-        ENEMIES.push_back(new Enemy( 90 , std::rand() % (MAP_HEIGHT-2) + 2 ) );
-    }
-
-    // Player Movement
-    if(GetAsyncKeyState(VK_RIGHT) & 0x8000 && !pressed){
-        pressed = true;
-        PLAYER_XPOS += PLAYER_SPEED;
-    }else if(GetAsyncKeyState(VK_LEFT) & 0x8000 && !pressed){
-        pressed = true;
-        PLAYER_XPOS -= PLAYER_SPEED;
-    }else if(GetAsyncKeyState(VK_DOWN) & 0x8000 && !pressed){
-        pressed = true;
-        PLAYER_YPOS += PLAYER_SPEED;
-    }else if(GetAsyncKeyState(VK_UP) & 0x8000 && !pressed){
-        pressed = true;
-        PLAYER_YPOS -= PLAYER_SPEED;
-    }else if(!GetAsyncKeyState(VK_RIGHT) & 0x8000 || !GetAsyncKeyState(VK_LEFT) & 0x8000 && pressed ){
-        pressed = false;
-    }
-};
-
-void render(){
-    HANDLE handle_console = GetStdHandle( STD_OUTPUT_HANDLE );
-
-    CONSOLE_CURSOR_INFO cursorInfo;
-    cursorInfo.dwSize = 100;
-    cursorInfo.bVisible = FALSE;
-    SetConsoleCursorInfo( handle_console, &cursorInfo);
-
-    COORD coord = { 0, 0 };
-    SetConsoleCursorPosition( handle_console, coord);
-
-    int buffer_map[MAP_WIDTH][MAP_HEIGHT] = {0};
-
-    // !!! You'll add items here, that need to be drawn !!! 
-
-    // Write Buffer
-    for( int y=0; y<MAP_HEIGHT; y++){
-        for( int x=0; x<MAP_WIDTH; x++){
-
-            // Border
-            if( x==0 || x==MAP_WIDTH-1 || y==0 || y==MAP_HEIGHT-1){
-                buffer_map[x][y] = 1;
-            }
-
-            // Player
-            if( x==int(PLAYER_XPOS) && y==int(PLAYER_YPOS) ){
-                buffer_map[x][y] = 2;
-            }
-            
-            // Player Bullet
-            if(PLAYER_BULLETS.size() > 0){
-                for( int i=0; i<PLAYER_BULLETS.size(); i++){
-                    if( x == int(PLAYER_BULLETS[i]->return_bullet_xpos()) && y == int(PLAYER_BULLETS[i]->return_bullet_ypos()) ){
-                        buffer_map[x][y] = 3;
-                    }
-                }
-            }
-
-            // Enemy
-            if(ENEMIES.size() > 0){
-                for( int i=0; i<ENEMIES.size(); i++){
-                    if( x == int(ENEMIES[i]->return_enemy_xpos()) && y == int(ENEMIES[i]->return_enemy_ypos()) ){
-                        buffer_map[x][y] = 4;
-                    }
-                }
-            }
-        }
-    }
-
-    // Render Buffer
-    for( int y=0; y<MAP_HEIGHT; y++){
-        for( int x=0; x<MAP_WIDTH; x++){
-            if(buffer_map[x][y] == 0){
-                std::cout << ' ';
-            }else if(buffer_map[x][y] == 1){
-                std::cout << '#';
-            }else if(buffer_map[x][y] == 2){
-                std::cout << 'X';
-            }else if(buffer_map[x][y] == 3){
-                std::cout << '>';
-            }else if(buffer_map[x][y] == 4){
-                std::cout << '@';
-            }
-        }
-        std::cout << std::endl;
-    }
-};
-
-
-int main( int argc, char* argv[])
+class Physics
 {
-    while(GAMEACTIVE)
-    {
-        collisions();
-        physics();
-        input();
-        render();
+private:
+    GameObject* GAMEOBJECT;
+public:
+    Physics(GameObject* gameObject){ GAMEOBJECT = gameObject; };
+
+    void force_simple_x_axis(float force){ GAMEOBJECT->set_gameobject_xpos(GAMEOBJECT->return_float_gameobject_xpos()+force); };
+
+    void force_simple_y_axis(float force){ GAMEOBJECT->set_gameobject_ypos(GAMEOBJECT->return_float_gameobject_ypos()+force); };
+};
+
+class Collision
+{
+private:
+    GameObject* GAMEOBJECT;
+    Window* HANDLE_WINDOW;
+public:
+    Collision(GameObject* gameObject, Window* window){
+        GAMEOBJECT = gameObject;
+        HANDLE_WINDOW = window;
+    };
+
+    void detect_collision_border(){
+        if( GAMEOBJECT->return_float_gameobject_xpos() >= HANDLE_WINDOW->return_int_window_width()-2)
+            GAMEOBJECT->set_gameobject_xpos(HANDLE_WINDOW->return_int_window_width()-2);
+        if( GAMEOBJECT->return_float_gameobject_xpos() <= 2)
+            GAMEOBJECT->set_gameobject_xpos(2);
+        if( GAMEOBJECT->return_float_gameobject_ypos() >= HANDLE_WINDOW->return_int_window_height()-2)
+            GAMEOBJECT->set_gameobject_ypos(HANDLE_WINDOW->return_int_window_height()-2);
+        if( GAMEOBJECT->return_float_gameobject_ypos() <= 2)
+            GAMEOBJECT->set_gameobject_ypos(2);
+    };
+};
+
+class User
+{
+public:
+    bool quit(){
+        if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+            return true;
+        else
+            return false;
+    };
+};
+
+class Game
+{
+private:
+    bool GAMEACTIVE = true;
+    Window HANDLE_WINDOW;
+    
+public:
+    Game(): HANDLE_WINDOW(100,10){};
+
+    void run(){
         
-        auto now = std::chrono::system_clock::now();
-        std::this_thread::sleep_until( now + std::chrono::milliseconds(3) );
-    }
-    return 0;
+        User user;
+
+        GameObject player_1("player_1",25,3,'X');
+        GameObject player_2("player_2",75,3,'O');
+
+        Physics player1_physics(&player_1);
+        Physics player2_physics(&player_2);
+
+        Collision player1_collision(&player_1, &HANDLE_WINDOW);
+        Collision player2_collision(&player_2, &HANDLE_WINDOW);
+
+        float x=20;
+        bool forward = true;
+
+        while(GAMEACTIVE){
+
+            // Physics
+            player1_physics.force_simple_x_axis(0.025f);
+            player2_physics.force_simple_x_axis(-0.025f);
+
+            // Collision
+            player1_collision.detect_collision_border();
+            player2_collision.detect_collision_border();
+
+            // Input
+            if(user.quit() == true){ GAMEACTIVE = false; };
+
+            // Window
+            HANDLE_WINDOW.buffer_clear();
+
+            HANDLE_WINDOW.drawBorder('#');
+            HANDLE_WINDOW.draw(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_char_gameobject_sprite());
+            HANDLE_WINDOW.draw(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_char_gameobject_sprite());
+
+            char sprite[5][5] = {
+                {' ', '_', '_', '_', ' '},
+                {'|', 'o', ' ', 'o', '|'},
+                {'|', ' ', '_', ' ', '|'},
+                {' ', '|', '_', '|', ' '},
+                {' ', ' ', ' ', ' ', ' '}
+            };
+
+            if(forward){
+                if(x>80){
+                    forward = false;
+                }
+                HANDLE_WINDOW.drawSprite(x,3,sprite);
+                x = x+0.25f;
+            }else{
+                if(x<20){    
+                    forward = true;
+                }
+                HANDLE_WINDOW.drawSprite(x,3,sprite);
+                x = x-0.25f;
+            }
+
+            HANDLE_WINDOW.buffer_swap();
+            HANDLE_WINDOW.render();
+        }
+    };
 };
+
+int main(int argc, char* argv[])
+{
+    Game game;
+    game.run();
+    return 0;
+}
