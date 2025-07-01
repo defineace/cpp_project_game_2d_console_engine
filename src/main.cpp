@@ -8,6 +8,9 @@ Basic 2D Game Engine
 
 Gameobject can render within window bounds
 
+TODO:
+Need to make MainMenu a class, no need to cluster fuck Game XD
+
 #################################################################
 */
 #include <iostream>
@@ -300,11 +303,8 @@ public:
 
     void set_gameobject_sprite(std::vector<std::string> sprite){ OBJECT_SPRITE = sprite; };
 
-
-
     std::vector<std::string> return_gameobject_sprite(){ return OBJECT_SPRITE; };
 };
-
 
 class Physics
 {
@@ -443,9 +443,7 @@ public:
         // ##############################################################################
         while(GAMEACTIVE){
             // Input
-            if(user.quit()==1){
-                GAMEACTIVE=!GAMEACTIVE;
-            }
+            if(user.quit()==1){GAMEACTIVE=!GAMEACTIVE;}
 
             if(user.mainMenu_scroll() == 11){
                 if(selection<=0)
@@ -504,6 +502,8 @@ public:
             HANDLE_WINDOW.buffer_swap();
             HANDLE_WINDOW.render();
         }
+
+         
         // ##############################################################################
         // End MainMenu Loop
         // ##############################################################################
@@ -531,9 +531,9 @@ public:
         Collision ball_collision(&ball);
         
         // ######################################################################################
-        // Main Loop
+        // Game Loop
         // ######################################################################################
-        while(GAMEACTIVE)
+        while(true)
         {   
             //Framerate Limiter
             auto now = std::chrono::system_clock::now();
@@ -554,11 +554,10 @@ public:
             ball_collision.detect_collision_player_bounce(&player_2);
 
             // Input
-            if(USER.quit()==1){GAMEACTIVE=!GAMEACTIVE;}
+            if(USER.quit()==1){break;}
 
             // Render
             HANDLE_WINDOW.buffer_clear();
-
             HANDLE_WINDOW.drawBorder('#');
             HANDLE_WINDOW.drawSprite(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_gameobject_sprite());
             HANDLE_WINDOW.drawSprite(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_gameobject_sprite());
@@ -566,7 +565,7 @@ public:
             HANDLE_WINDOW.render();
         }
         // ######################################################################################
-        // End of Main Loop
+        // End of Game Loop
         // ######################################################################################
     };
 };
