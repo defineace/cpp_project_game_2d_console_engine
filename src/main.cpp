@@ -17,7 +17,7 @@ Gameobject can render within window bounds
 #include <ctime>
 #include <thread>
 #include <chrono>
-
+// Original Draft
 class Enemy
 {
 private:
