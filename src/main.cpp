@@ -268,6 +268,8 @@ private:
     float OBJECT_YPOS;
     std::vector<std::string> OBJECT_SPRITE;
 
+    float OBJECT_VELOCITY_XAXIS = 0;
+    float OBJECT_VELOCITY_YAXIS = 0;
 public:
     GameObject(std::string label,float xPos,float yPos,std::vector<std::string> sprite){
         OBJECT_LABEL = label;
@@ -276,21 +278,100 @@ public:
         OBJECT_SPRITE = sprite;
     };
 
-    void set_gameobject_xpos(float xPos){ OBJECT_XPOS = xPos; };
-
-    void set_gameobject_ypos(float yPos){ OBJECT_YPOS = yPos; };
-
-    void set_gameobject_sprite(std::vector<std::string> sprite){ OBJECT_SPRITE = sprite; };
-
     float return_float_gameobject_xpos(){ return OBJECT_XPOS; };
 
     float return_float_gameobject_ypos(){ return OBJECT_YPOS; };
+
+    void set_gameobject_xpos(float xPos){ OBJECT_XPOS = xPos; };
+
+    void set_gameobject_ypos(float yPos){ OBJECT_YPOS = yPos; };
 
     int return_int_gameobject_xpos(){ return int(OBJECT_XPOS); };
 
     int return_int_gameobject_ypos(){ return int(OBJECT_YPOS); };
 
+    void set_gameobject_velocity_xaxis(float force){ OBJECT_VELOCITY_XAXIS = force; };
+
+    void set_gameobject_velocity_yaxis(float force){ OBJECT_VELOCITY_YAXIS = force; };
+
+    float return_float_gameobject_velocity_xaxis(){ return OBJECT_VELOCITY_XAXIS; };
+
+    float return_float_gameobject_velocity_yaxis(){ return OBJECT_VELOCITY_YAXIS; };
+
+    void set_gameobject_sprite(std::vector<std::string> sprite){ OBJECT_SPRITE = sprite; };
+
+
+
     std::vector<std::string> return_gameobject_sprite(){ return OBJECT_SPRITE; };
+};
+
+
+class Physics
+{
+private:
+    GameObject* GAMEOBJECT;
+public:
+    Physics(GameObject* gameObject){ GAMEOBJECT = gameObject; };
+
+    void force_simple_x_axis(float force){ GAMEOBJECT->set_gameobject_xpos(GAMEOBJECT->return_float_gameobject_xpos()+force); };
+
+    void force_simple_y_axis(float force){ GAMEOBJECT->set_gameobject_ypos(GAMEOBJECT->return_float_gameobject_ypos()+force); };
+};
+
+class Collision
+{
+private:
+    GameObject* GAMEOBJECT;
+
+public:
+    Collision(GameObject* gameObject){
+        GAMEOBJECT = gameObject;
+    };
+
+    void detect_collision_wall_stop(Window* handle_window){
+        float height = GAMEOBJECT->return_gameobject_sprite().size()-1;
+        float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
+        float padding = 1;
+
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_window->return_int_window_width()-padding)
+            GAMEOBJECT->set_gameobject_xpos(handle_window->return_int_window_width()-padding-width);
+        if( GAMEOBJECT->return_float_gameobject_xpos() <= padding)
+            GAMEOBJECT->set_gameobject_xpos(padding);
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_window->return_int_window_height()-2)
+            GAMEOBJECT->set_gameobject_ypos(handle_window->return_int_window_height()-padding-height);
+        if( GAMEOBJECT->return_float_gameobject_ypos() <= padding)
+            GAMEOBJECT->set_gameobject_ypos(padding);
+    };
+
+    void detect_collision_wall_bounce(Window* handle_window){
+
+        float height = GAMEOBJECT->return_gameobject_sprite().size()-1;
+        float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
+        float padding = 1;
+
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_window->return_int_window_width()-padding)
+            GAMEOBJECT->set_gameobject_velocity_xaxis(GAMEOBJECT->return_float_gameobject_velocity_xaxis()*-1);
+        if( GAMEOBJECT->return_float_gameobject_xpos() <= padding)
+            GAMEOBJECT->set_gameobject_velocity_xaxis(GAMEOBJECT->return_float_gameobject_velocity_xaxis()*-1);
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_window->return_int_window_height()-2)
+            GAMEOBJECT->set_gameobject_velocity_yaxis(GAMEOBJECT->return_float_gameobject_velocity_yaxis()*-1);
+        if( GAMEOBJECT->return_float_gameobject_ypos() <= padding)
+            GAMEOBJECT->set_gameobject_velocity_yaxis(GAMEOBJECT->return_float_gameobject_velocity_yaxis()*-1);
+    };
+
+    void detect_collision_player_bounce(GameObject* player){
+        float height = GAMEOBJECT->return_gameobject_sprite().size()-1;
+        float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
+
+        if( 
+            GAMEOBJECT->return_float_gameobject_xpos() >= player->return_int_gameobject_xpos() &&
+            GAMEOBJECT->return_float_gameobject_xpos()+width <= player->return_float_gameobject_xpos() + player->return_gameobject_sprite()[0].length() &&
+            GAMEOBJECT->return_float_gameobject_ypos() >= player->return_float_gameobject_ypos() &&
+            GAMEOBJECT->return_float_gameobject_ypos()+height <= player->return_float_gameobject_ypos() + player->return_gameobject_sprite().size()
+        ){
+            GAMEOBJECT->set_gameobject_velocity_xaxis(GAMEOBJECT->return_float_gameobject_velocity_xaxis()*-1);
+        }
+    };
 };
 
 class User
@@ -336,13 +417,27 @@ private:
 public:
     Game(): HANDLE_WINDOW(150,30){};
     void run(){
-        Server server;
-        Sprite sprite_player("./assets/sprite_player.txt");
         User user;
-
+        Sprite sprite_player("./assets/sprite_player.txt");
+        Sprite sprite_ball("./assets/sprite_ball.txt");
+        
         GameObject player_1("player_1",20.0f,10.0f,sprite_player.return_sprite());
         GameObject player_2("player_2",130.0f,10.0f,sprite_player.return_sprite());
+        GameObject ball("ball",75.0f,10.0f,sprite_ball.return_sprite());
 
+        player_1.set_gameobject_velocity_yaxis(0.25);
+        player_2.set_gameobject_velocity_yaxis(-0.25);
+        ball.set_gameobject_velocity_xaxis(0.25);
+        ball.set_gameobject_velocity_yaxis(0.25);
+
+        Physics player1_physics(&player_1);
+        Physics player2_physics(&player_2);
+        Physics ball_physics(&ball);
+
+        Collision player1_collision(&player_1);
+        Collision player2_collision(&player_2);
+        Collision ball_collision(&ball);
+        
         // ######################################################################################
         // Main Loop
         // ######################################################################################
@@ -352,23 +447,30 @@ public:
             auto now = std::chrono::system_clock::now();
             std::this_thread::sleep_until( now + std::chrono::milliseconds(3) );
 
-            // Movement
-            player_2.set_gameobject_xpos(server.return_player_position()[0]);
-            player_2.set_gameobject_ypos(server.return_player_position()[1]);
-            
+            // Physics
+            player1_physics.force_simple_y_axis(player_1.return_float_gameobject_velocity_yaxis());
+            player2_physics.force_simple_y_axis(player_2.return_float_gameobject_velocity_yaxis());
+            ball_physics.force_simple_x_axis(ball.return_float_gameobject_velocity_xaxis());
+            ball_physics.force_simple_y_axis(ball.return_float_gameobject_velocity_yaxis());
+
+            // Collision
+            player1_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
+            player2_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
+            ball_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
+
+            ball_collision.detect_collision_player_bounce(&player_1);
+            ball_collision.detect_collision_player_bounce(&player_2);
+
             // Input
             if(user.quit()==1){GAMEACTIVE=!GAMEACTIVE;}
 
             // Render
             HANDLE_WINDOW.buffer_clear();
 
-            // for(int i=0;i<server.return_server_messages().size();i++){
-            //     HANDLE_WINDOW.drawText(50,5+i,server.return_server_messages()[i]);
-            // }
-
             HANDLE_WINDOW.drawBorder('#');
             HANDLE_WINDOW.drawSprite(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_gameobject_sprite());
             HANDLE_WINDOW.drawSprite(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_gameobject_sprite());
+            HANDLE_WINDOW.drawSprite(ball.return_int_gameobject_xpos(),ball.return_int_gameobject_ypos(),ball.return_gameobject_sprite());
             HANDLE_WINDOW.render();
         }
         // ######################################################################################
