@@ -1,0 +1,8 @@
+[ x ]     PLAY      [ x ]
+[   ]     PLAY      [   ]
+[ x ]  MULTIPLAYER  [ x ]
+[   ]  MULTIPLAYER  [   ]
+[ x ]      AI       [ x ]
+[   ]      AI       [   ]
+[ x ]     QUIT      [ x ]
+[   ]     QUIT      [   ]
