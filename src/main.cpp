@@ -4,9 +4,9 @@ TITLE:
 CPP_TEMPLATE_GAME_2D_BASIC
 
 DESCRIPTION:
-Basic 2D Game Engine, where it renders border 
-and player. Player can be moved with arrow keys. Engine writes
-to a buffer and then to the console buffer.
+Basic 2D Game Engine
+
+Gameobject can render within window bounds
 
 #################################################################
 */
