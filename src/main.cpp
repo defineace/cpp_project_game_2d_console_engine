@@ -11,51 +11,178 @@ Gameobject can render within window bounds
 #################################################################
 */
 #include <iostream>
-#include <windows.h>
-#include <thread>
-#include <chrono>
-#include <cmath>
 #include <string>
+#include <sstream>
+#include <cstdlib>
+#include <vector>
+#include <chrono>
+#include <thread>
+#include <fstream>
+
+#include <winsock2.h>
+#include <windows.h>
+
+#pragma comment(lib,"ws2_32.lib")
+
+class Server
+{
+private:
+    std::vector<std::string> SERVER_MESSAGES;
+    std::vector<float> PLAYER_POSTION = {130.0,10.0};
+
+    void run(SOCKET serverSocket){
+
+        // ######################################################################################
+        // Client Handle
+        // ######################################################################################
+
+        sockaddr_in clientAddress;
+        int clientSize = sizeof(clientAddress);
+        SOCKET clientSocket = accept( serverSocket, (sockaddr*)&clientAddress, &clientSize);
+        SERVER_MESSAGES.push_back("CLIENT::CONNECTED");
+        
+        while(true){
+            char buffer[1024] = {};
+            recv( clientSocket, buffer, sizeof(buffer), 0);
+
+            std::string data = buffer;
+            SERVER_MESSAGES.push_back("CLIENT::" + data);
+
+            std::stringstream ss(data);
+            std::string token;
+
+            std::string name;
+            float x = 0.0f;
+            float y = 0.0f;
+
+            // First: name
+            std::getline(ss, name, ',');
+
+            // Second: x
+            std::getline(ss, token, ',');
+            x = std::stof(token);
+
+            // Third: y
+            std::getline(ss, token, ',');
+            y = std::stof(token);
+
+            if(name=="quit")
+                break;
+            PLAYER_POSTION[0] = x;
+            PLAYER_POSTION[1] = y;
+        }
+
+        closesocket(clientSocket);
+        SERVER_MESSAGES.push_back("CLIENT::DISCONNECTED");
+        
+        // ######################################################################################
+        // End of Client Handle
+        // ######################################################################################
+
+        closesocket(serverSocket);
+        WSACleanup();
+        SERVER_MESSAGES.push_back("SERVER::SERVER_ENDED");
+    };
+    
+public:
+    Server(){
+        WSADATA wsaData;
+        if(WSAStartup(MAKEWORD(2,2),&wsaData)!=0)
+        {
+            SERVER_MESSAGES.push_back("ERROR::WSA_STARTUP_FAILED");
+        }
+
+        SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+        if(serverSocket == -1)
+        {
+            WSACleanup();
+            SERVER_MESSAGES.push_back("ERROR::FAILED_TO_CREATE_SOCKET");
+        }
+
+        sockaddr_in serverAddress;
+        serverAddress.sin_family = AF_INET;
+        serverAddress.sin_port = htons(8080);
+        serverAddress.sin_addr.s_addr = INADDR_ANY;
+        
+        if( bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR )
+        {
+            closesocket(serverSocket);
+            WSACleanup();
+            SERVER_MESSAGES.push_back("ERROR::FAILED_TO_BIND, Code: " + std::to_string(WSAGetLastError()));
+        }
+        
+        if(listen(serverSocket, 5) == SOCKET_ERROR)
+        {
+            SERVER_MESSAGES.push_back("ERROR::FAILED_TO_LISTEN, Code: " + std::to_string(WSAGetLastError()));
+            closesocket(serverSocket);
+            WSACleanup();
+        }
+
+        SERVER_MESSAGES.push_back("SERVER::SERVER_STARTED");
+        SERVER_MESSAGES.push_back("SERVER::AWAITING_CONNECTIONS");
+
+        std::thread thread_run(&Server::run,this,serverSocket);
+        thread_run.detach();
+    };
+
+    std::vector<std::string> return_server_messages(){return SERVER_MESSAGES;};
+    std::vector<float> return_player_position(){return PLAYER_POSTION;};
+};
 
 class Window
 {
 private:
     int WINDOW_WIDTH;
     int WINDOW_HEIGHT;
+    
+    std::vector<std::string> BUFFER_FRONT;
+    std::vector<std::string> BUFFER_BACK;
 
-    char** BUFFER_FRONT;
-    char** BUFFER_BACK;
     bool BUFFERSWAP = true;
 
 public:
-    Window(int width, int height){
+    Window(int width,int height){
         WINDOW_WIDTH = width;
         WINDOW_HEIGHT = height;
-
-        BUFFER_FRONT = new char*[WINDOW_WIDTH];
-        for (int i = 0; i < WINDOW_WIDTH; i++)
-            BUFFER_FRONT[i] = new char[WINDOW_HEIGHT];
-
-        BUFFER_BACK = new char*[WINDOW_WIDTH];
-        for (int i = 0; i < WINDOW_WIDTH; i++)
-            BUFFER_BACK[i] = new char[WINDOW_HEIGHT];
-
-        for(int y=0; y<WINDOW_HEIGHT; y++){
-            for(int x=0; x<WINDOW_WIDTH; x++){
-                BUFFER_BACK[x][y] = ' ';
-                BUFFER_FRONT[x][y] = ' ';
-            }
+        
+        for(int y=0;y<WINDOW_HEIGHT;y++){
+            std::string line(WINDOW_WIDTH,' ');
+            BUFFER_FRONT.push_back(line);
+            BUFFER_BACK.push_back(line);
         }
     };
 
-    ~Window() {
-        for (int i = 0; i < WINDOW_WIDTH; i++)
-            delete[] BUFFER_FRONT[i];
-        delete[] BUFFER_FRONT;
+    ~Window(){
+        BUFFER_FRONT.clear();
+        BUFFER_BACK.clear();
+    };
 
-        for (int i = 0; i < WINDOW_WIDTH; i++)
-            delete[] BUFFER_BACK[i];
-        delete[] BUFFER_BACK;
+    void draw(int xPos,int yPos,char character){
+        if(BUFFERSWAP)             
+            BUFFER_BACK[yPos][xPos] = character;
+        else
+            BUFFER_FRONT[yPos][xPos] = character;
+    };
+
+    void drawSprite(int xPos,int yPos,std::vector<std::string> sprite){
+        for (int y=0;y<sprite.size();y++) {
+            for (int x=0;x<sprite[0].size() ;x++) {
+                if(BUFFERSWAP)
+                    BUFFER_BACK[yPos+y][xPos+x] = sprite[y][x];
+                else
+                    BUFFER_FRONT[yPos+y][xPos+x] = sprite[y][x];
+            }
+        }
+    };
+    
+    void drawText(int xPos,int yPos,std::string text){
+        for(int i=0;i<text.length();i++){
+            if(BUFFERSWAP)
+                BUFFER_BACK[yPos][xPos+i] = text[i];
+            else
+                BUFFER_FRONT[yPos][xPos+i] = text[i];
+        }
     };
 
     void drawBorder(char character){
@@ -63,78 +190,42 @@ public:
             for( int x=0; x<WINDOW_WIDTH; x++){
                 if( x==0 || x==WINDOW_WIDTH-1 || y==0 || y==WINDOW_HEIGHT-1)
                     if(BUFFERSWAP)             
-                        BUFFER_BACK[x][y] = character;
+                        BUFFER_BACK[y][x] = character;
                     else
-                        BUFFER_FRONT[x][y] = character;
-            }
-        }
-    };
-
-    void draw(int xPos,int yPos,char character){
-        if(BUFFERSWAP)             
-            BUFFER_BACK[xPos][yPos] = character;
-        else
-            BUFFER_FRONT[xPos][yPos] = character;
-    };
-
-    void drawSquare(int xPos,int yPos,int width,int height,char character){
-        for(int y=yPos; y<yPos+height; y++){
-            for(int x=xPos; x<xPos+width; x++){ 
-                if(BUFFERSWAP)             
-                    BUFFER_BACK[x][y] = character;
-                else
-                    BUFFER_FRONT[x][y] = character;
-            }
-        }
-    };
-
-    void drawSprite(int xPos,int yPos,char sprite[5][5]){
-        for (int y = yPos; y < yPos + 5; y++) {
-            for (int x = xPos; x < xPos + 5; x++) {
-                if (x < 0 || x >= WINDOW_WIDTH || y < 0 || y >= WINDOW_HEIGHT)
-                    continue;
-                
-                int index_x = x - xPos;
-                int index_y = y - yPos;
-
-                if (BUFFERSWAP)             
-                    BUFFER_BACK[x][y] = sprite[index_y][index_x];
-                else
-                    BUFFER_FRONT[x][y] = sprite[index_y][index_x];
+                        BUFFER_FRONT[y][x] = character;
             }
         }
     };
 
     void buffer_clear(){
-        for(int y=0; y<WINDOW_HEIGHT; y++){
-            for(int x=0; x<WINDOW_WIDTH; x++){
+        for(int y=0;y<WINDOW_HEIGHT;y++){
+            for(int x=0;x<WINDOW_WIDTH;x++){
                 if(BUFFERSWAP)
-                    BUFFER_BACK[x][y] = ' ';
+                    BUFFER_BACK[y][x] = ' ';
                 else
-                    BUFFER_FRONT[x][y] = ' ';
+                    BUFFER_FRONT[y][x] = ' ';
             }
         }
-    };
+    }
 
     void buffer_swap(){ BUFFERSWAP = !BUFFERSWAP; };
 
     void render(){
         HANDLE handle_console = GetStdHandle( STD_OUTPUT_HANDLE );
-
         CONSOLE_CURSOR_INFO cursorInfo;
         cursorInfo.dwSize = 100;
         cursorInfo.bVisible = FALSE;
-        SetConsoleCursorInfo( handle_console, &cursorInfo);
+        SetConsoleCursorInfo(handle_console,&cursorInfo);
 
-        COORD coord = { 0, 0 };
-        SetConsoleCursorPosition( handle_console, coord);
+        COORD coord = {0,0};
+        SetConsoleCursorPosition(handle_console,coord);
 
-        for(int y=0; y<WINDOW_HEIGHT; y++){
-            for(int x=0; x<WINDOW_WIDTH; x++){
+        for(int y=0;y<WINDOW_HEIGHT;y++){
+            for(int x=0;x<WINDOW_WIDTH;x++){
                 if(BUFFERSWAP)
-                    std::cout << BUFFER_BACK[x][y];
+                    std::cout << BUFFER_BACK[y][x];
                 else
-                    std::cout << BUFFER_FRONT[x][y];
+                    std::cout << BUFFER_FRONT[y][x];
             }
             std::cout << std::endl;
         }
@@ -145,16 +236,40 @@ public:
     int return_int_window_height(){ return WINDOW_HEIGHT; };
 };
 
+class Sprite
+{
+private:
+    std::string FILE_PATH;
+    std::vector<std::string> SPRITE;
+
+public:
+    Sprite(std::string path){
+        FILE_PATH = path;
+
+        std::ifstream file_read(path);
+        
+        if(file_read.is_open()){
+            std::string line;
+
+            while(std::getline(file_read, line)){
+                SPRITE.push_back(line);
+            }
+        }
+    };
+
+    std::vector<std::string> return_sprite(){return SPRITE;};
+};
+
 class GameObject
 {
 private:
     std::string OBJECT_LABEL;
     float OBJECT_XPOS;
     float OBJECT_YPOS;
-    char OBJECT_SPRITE;
+    std::vector<std::string> OBJECT_SPRITE;
 
 public:
-    GameObject(std::string label,float xPos,float yPos,char sprite){
+    GameObject(std::string label,float xPos,float yPos,std::vector<std::string> sprite){
         OBJECT_LABEL = label;
         OBJECT_XPOS = xPos;
         OBJECT_YPOS = yPos;
@@ -165,7 +280,7 @@ public:
 
     void set_gameobject_ypos(float yPos){ OBJECT_YPOS = yPos; };
 
-    void set_gameobject_sprite(char sprite){ OBJECT_SPRITE = sprite; };
+    void set_gameobject_sprite(std::vector<std::string> sprite){ OBJECT_SPRITE = sprite; };
 
     float return_float_gameobject_xpos(){ return OBJECT_XPOS; };
 
@@ -175,52 +290,40 @@ public:
 
     int return_int_gameobject_ypos(){ return int(OBJECT_YPOS); };
 
-    char return_char_gameobject_sprite(){ return OBJECT_SPRITE; };
-};
-
-class Physics
-{
-private:
-    GameObject* GAMEOBJECT;
-public:
-    Physics(GameObject* gameObject){ GAMEOBJECT = gameObject; };
-
-    void force_simple_x_axis(float force){ GAMEOBJECT->set_gameobject_xpos(GAMEOBJECT->return_float_gameobject_xpos()+force); };
-
-    void force_simple_y_axis(float force){ GAMEOBJECT->set_gameobject_ypos(GAMEOBJECT->return_float_gameobject_ypos()+force); };
-};
-
-class Collision
-{
-private:
-    GameObject* GAMEOBJECT;
-    Window* HANDLE_WINDOW;
-public:
-    Collision(GameObject* gameObject, Window* window){
-        GAMEOBJECT = gameObject;
-        HANDLE_WINDOW = window;
-    };
-
-    void detect_collision_border(){
-        if( GAMEOBJECT->return_float_gameobject_xpos() >= HANDLE_WINDOW->return_int_window_width()-2)
-            GAMEOBJECT->set_gameobject_xpos(HANDLE_WINDOW->return_int_window_width()-2);
-        if( GAMEOBJECT->return_float_gameobject_xpos() <= 2)
-            GAMEOBJECT->set_gameobject_xpos(2);
-        if( GAMEOBJECT->return_float_gameobject_ypos() >= HANDLE_WINDOW->return_int_window_height()-2)
-            GAMEOBJECT->set_gameobject_ypos(HANDLE_WINDOW->return_int_window_height()-2);
-        if( GAMEOBJECT->return_float_gameobject_ypos() <= 2)
-            GAMEOBJECT->set_gameobject_ypos(2);
-    };
+    std::vector<std::string> return_gameobject_sprite(){ return OBJECT_SPRITE; };
 };
 
 class User
 {
+private:
+    bool PRESSED = !PRESSED;
+
 public:
     bool quit(){
         if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
             return true;
         else
             return false;
+    };
+
+    bool mainMenu_select(){
+        if(GetAsyncKeyState(VK_SPACE) &0x8000)
+            return true;
+        else
+            return false;
+    };
+
+    int mainMenu_scroll(){
+        auto now = std::chrono::system_clock::now();
+        std::this_thread::sleep_until( now + std::chrono::milliseconds(25) );
+
+        if(GetAsyncKeyState(VK_UP) & 0x8000){
+            return 11;
+        }else if(GetAsyncKeyState(VK_DOWN) & 0x8000){
+            return 10;
+        }else{
+            return 5;
+        }
     };
 };
 
@@ -231,75 +334,52 @@ private:
     Window HANDLE_WINDOW;
     
 public:
-    Game(): HANDLE_WINDOW(100,10){};
-
+    Game(): HANDLE_WINDOW(150,30){};
     void run(){
-        
+        Server server;
+        Sprite sprite_player("./assets/sprite_player.txt");
         User user;
 
-        GameObject player_1("player_1",25,3,'X');
-        GameObject player_2("player_2",75,3,'O');
+        GameObject player_1("player_1",20.0f,10.0f,sprite_player.return_sprite());
+        GameObject player_2("player_2",130.0f,10.0f,sprite_player.return_sprite());
 
-        Physics player1_physics(&player_1);
-        Physics player2_physics(&player_2);
+        // ######################################################################################
+        // Main Loop
+        // ######################################################################################
+        while(GAMEACTIVE)
+        {   
+            //Framerate Limiter
+            auto now = std::chrono::system_clock::now();
+            std::this_thread::sleep_until( now + std::chrono::milliseconds(3) );
 
-        Collision player1_collision(&player_1, &HANDLE_WINDOW);
-        Collision player2_collision(&player_2, &HANDLE_WINDOW);
-
-        float x=20;
-        bool forward = true;
-
-        while(GAMEACTIVE){
-
-            // Physics
-            player1_physics.force_simple_x_axis(0.025f);
-            player2_physics.force_simple_x_axis(-0.025f);
-
-            // Collision
-            player1_collision.detect_collision_border();
-            player2_collision.detect_collision_border();
-
+            // Movement
+            player_2.set_gameobject_xpos(server.return_player_position()[0]);
+            player_2.set_gameobject_ypos(server.return_player_position()[1]);
+            
             // Input
-            if(user.quit() == true){ GAMEACTIVE = false; };
+            if(user.quit()==1){GAMEACTIVE=!GAMEACTIVE;}
 
-            // Window
+            // Render
             HANDLE_WINDOW.buffer_clear();
 
+            // for(int i=0;i<server.return_server_messages().size();i++){
+            //     HANDLE_WINDOW.drawText(50,5+i,server.return_server_messages()[i]);
+            // }
+
             HANDLE_WINDOW.drawBorder('#');
-            HANDLE_WINDOW.draw(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_char_gameobject_sprite());
-            HANDLE_WINDOW.draw(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_char_gameobject_sprite());
-
-            char sprite[5][5] = {
-                {' ', '_', '_', '_', ' '},
-                {'|', 'o', ' ', 'o', '|'},
-                {'|', ' ', '_', ' ', '|'},
-                {' ', '|', '_', '|', ' '},
-                {' ', ' ', ' ', ' ', ' '}
-            };
-
-            if(forward){
-                if(x>80){
-                    forward = false;
-                }
-                HANDLE_WINDOW.drawSprite(x,3,sprite);
-                x = x+0.25f;
-            }else{
-                if(x<20){    
-                    forward = true;
-                }
-                HANDLE_WINDOW.drawSprite(x,3,sprite);
-                x = x-0.25f;
-            }
-
-            HANDLE_WINDOW.buffer_swap();
+            HANDLE_WINDOW.drawSprite(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_gameobject_sprite());
+            HANDLE_WINDOW.drawSprite(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_gameobject_sprite());
             HANDLE_WINDOW.render();
         }
+        // ######################################################################################
+        // End of Main Loop
+        // ######################################################################################
     };
 };
 
-int main(int argc, char* argv[])
+int main(int argc,char* argv[])
 {
     Game game;
     game.run();
     return 0;
-}
+};
