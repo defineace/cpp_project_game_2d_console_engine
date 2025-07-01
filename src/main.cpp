@@ -413,11 +413,103 @@ class Game
 private:
     bool GAMEACTIVE = true;
     Window HANDLE_WINDOW;
-    
+    User USER;
+
 public:
     Game(): HANDLE_WINDOW(150,30){};
+
     void run(){
+
+        mainMenu();
+ 
+        HANDLE_WINDOW.buffer_clear();
+        HANDLE_WINDOW.drawBorder('#');
+        HANDLE_WINDOW.drawText(65,10,"GAME OVER");
+        HANDLE_WINDOW.render();
+    };
+
+    void mainMenu(){
+        std::string path_title = "./assets/sprite_mainmenu_title.txt";
+        Sprite sprite_title(path_title);
+        std::string path_options = "./assets/sprite_mainmenu_options.txt";
+        Sprite sprite_options(path_options);
+
         User user;
+        
+        int selection = 0;
+
+        // ##############################################################################
+        // Start MainMenu Loop
+        // ##############################################################################
+        while(GAMEACTIVE){
+            // Input
+            if(user.quit()==1){
+                GAMEACTIVE=!GAMEACTIVE;
+            }
+
+            if(user.mainMenu_scroll() == 11){
+                if(selection<=0)
+                    selection=0;
+                else
+                    selection = selection - 1;
+            }
+            if(user.mainMenu_scroll() == 10){
+                if(selection>=3)
+                    selection=3;
+                else
+                    selection = selection + 1;
+            }
+            if(user.mainMenu_select()==1){
+                if(selection == 0){gameLoop();}
+                if(selection == 1){}
+                if(selection == 2){}
+                if(selection == 3){
+                    GAMEACTIVE = !GAMEACTIVE;
+                }
+            };
+            
+            // Render
+
+            std::vector<std::string> render_options;
+            
+            if(selection == 0){
+                render_options.push_back(sprite_options.return_sprite()[0]);
+                render_options.push_back(sprite_options.return_sprite()[3]);
+                render_options.push_back(sprite_options.return_sprite()[5]);
+                render_options.push_back(sprite_options.return_sprite()[7]);
+            }
+            if(selection == 1){
+                render_options.push_back(sprite_options.return_sprite()[1]);
+                render_options.push_back(sprite_options.return_sprite()[2]);
+                render_options.push_back(sprite_options.return_sprite()[5]);
+                render_options.push_back(sprite_options.return_sprite()[7]);
+            }
+            if(selection == 2){
+                render_options.push_back(sprite_options.return_sprite()[1]);
+                render_options.push_back(sprite_options.return_sprite()[3]);
+                render_options.push_back(sprite_options.return_sprite()[4]);
+                render_options.push_back(sprite_options.return_sprite()[7]);
+            }
+            if(selection == 3){
+                render_options.push_back(sprite_options.return_sprite()[1]);
+                render_options.push_back(sprite_options.return_sprite()[3]);
+                render_options.push_back(sprite_options.return_sprite()[5]);
+                render_options.push_back(sprite_options.return_sprite()[6]);
+            }
+            
+            HANDLE_WINDOW.buffer_clear();
+            HANDLE_WINDOW.drawBorder('#');
+            HANDLE_WINDOW.drawSprite(int(HANDLE_WINDOW.return_int_window_width()/2.8),2,sprite_title.return_sprite());
+            HANDLE_WINDOW.drawSprite(int(HANDLE_WINDOW.return_int_window_width()/2.5),10,render_options);
+            HANDLE_WINDOW.buffer_swap();
+            HANDLE_WINDOW.render();
+        }
+        // ##############################################################################
+        // End MainMenu Loop
+        // ##############################################################################
+    };
+    
+    void gameLoop(){
         Sprite sprite_player("./assets/sprite_player.txt");
         Sprite sprite_ball("./assets/sprite_ball.txt");
         
@@ -462,7 +554,7 @@ public:
             ball_collision.detect_collision_player_bounce(&player_2);
 
             // Input
-            if(user.quit()==1){GAMEACTIVE=!GAMEACTIVE;}
+            if(USER.quit()==1){GAMEACTIVE=!GAMEACTIVE;}
 
             // Render
             HANDLE_WINDOW.buffer_clear();
