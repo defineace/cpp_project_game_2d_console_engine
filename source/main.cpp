@@ -9,7 +9,7 @@ Basic 2D Game Engine
 Gameobject can render within window bounds
 
 TODO:
-Need to make MainMenu a class, no need to cluster fuck Game XD
+Need to add NetworkClient Class
 
 #################################################################
 */
@@ -31,7 +31,8 @@ class NetworkServer
 {
 private:
     std::vector<std::string> SERVER_MESSAGES;
-    std::vector<float> PLAYER_POSTION = {130.0,10.0};
+    std::vector<float> PLAYER_1_POSTION = {20.0,10.0};
+    std::vector<float> PLAYER_2_POSTION = {130.0,10.0};
 
     void run(SOCKET serverSocket){
 
@@ -58,21 +59,17 @@ private:
             float x = 0.0f;
             float y = 0.0f;
 
-            // First: name
             std::getline(ss, name, ',');
 
-            // Second: x
             std::getline(ss, token, ',');
             x = std::stof(token);
 
-            // Third: y
             std::getline(ss, token, ',');
             y = std::stof(token);
 
-            if(name=="quit")
-                break;
-            PLAYER_POSTION[0] = x;
-            PLAYER_POSTION[1] = y;
+            if(name=="quit"){break;}
+            if(name=="player_1"){set_server_player_position(0,x,y);}
+            if(name=="player_2"){set_server_player_position(1,x,y);}
         }
 
         closesocket(clientSocket);
@@ -86,7 +83,7 @@ private:
         WSACleanup();
         SERVER_MESSAGES.push_back("SERVER::SERVER_ENDED");
     };
-    
+
 public:
     NetworkServer(){
         WSADATA wsaData;
@@ -129,8 +126,22 @@ public:
         thread_run.detach();
     };
 
+    void set_server_player_position(int selectPlayer, float xPos, float yPos){
+        if(selectPlayer == 0){
+            PLAYER_1_POSTION[0] = xPos;
+            PLAYER_1_POSTION[1] = yPos;
+        }else if(selectPlayer == 1){
+            PLAYER_2_POSTION[0] = xPos;
+            PLAYER_2_POSTION[1] = yPos;
+        }
+    };
+
+    std::vector<float> return_server_player_position(int selectPlayer){
+        if(selectPlayer==0){return PLAYER_1_POSTION;}
+        else if(selectPlayer==1){return PLAYER_2_POSTION;}
+    };
+
     std::vector<std::string> return_server_messages(){return SERVER_MESSAGES;};
-    std::vector<float> return_player_position(){return PLAYER_POSTION;};
 };
 
 class Window
@@ -258,6 +269,7 @@ public:
                 SPRITE.push_back(line);
             }
         }
+        file_read.close();
     };
 
     std::vector<std::string> return_sprite(){return SPRITE;};
@@ -567,17 +579,12 @@ public:
             // Collision
             player1_collision.detect_collision_wall_bounce(HANDLE_WINDOW);
             player2_collision.detect_collision_wall_bounce(HANDLE_WINDOW);
-            ball_collision.detect_collision_wall_bounce(HANDLE_WINDOW);
-            
-            if(ball_collision.detect_collision_wall_identify(HANDLE_WINDOW) == 12){
-                SCORE_PLAYER_2++;
-            }
-            if(ball_collision.detect_collision_wall_identify(HANDLE_WINDOW) == 11){
-                SCORE_PLAYER_1++;
-            }
 
+            ball_collision.detect_collision_wall_bounce(HANDLE_WINDOW);
             ball_collision.detect_collision_player_bounce(&player_1);
             ball_collision.detect_collision_player_bounce(&player_2);
+            if(ball_collision.detect_collision_wall_identify(HANDLE_WINDOW) == 12){SCORE_PLAYER_2++;}
+            if(ball_collision.detect_collision_wall_identify(HANDLE_WINDOW) == 11){SCORE_PLAYER_1++;}
 
             std::string scoreboard_player_1 = "Player 1: " + std::to_string(SCORE_PLAYER_1);
             std::string scoreboard_player_2 = "Player 2: " + std::to_string(SCORE_PLAYER_2);
@@ -589,9 +596,7 @@ public:
             HANDLE_WINDOW->drawSprite(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_gameobject_sprite());
             HANDLE_WINDOW->drawSprite(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_gameobject_sprite());
             HANDLE_WINDOW->drawSprite(ball.return_int_gameobject_xpos(),ball.return_int_gameobject_ypos(),ball.return_gameobject_sprite());
-
             HANDLE_WINDOW->drawText(int(HANDLE_WINDOW->return_int_window_width()/2)-(score_line.length()/2),10,score_line);
-
             HANDLE_WINDOW->render();
         }
         // ######################################################################################
