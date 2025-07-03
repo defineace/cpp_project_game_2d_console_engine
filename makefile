@@ -1,5 +1,5 @@
 CXX = g++
-CPP = ./src/main.cpp
+CPP = ./source/main.cpp
 TARGET = ./bin/main
 OBJECTS = $(CPP)
 
