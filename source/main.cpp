@@ -27,7 +27,7 @@ Need to make MainMenu a class, no need to cluster fuck Game XD
 
 #pragma comment(lib,"ws2_32.lib")
 
-class Server
+class NetworkServer
 {
 private:
     std::vector<std::string> SERVER_MESSAGES;
@@ -88,7 +88,7 @@ private:
     };
     
 public:
-    Server(){
+    NetworkServer(){
         WSADATA wsaData;
         if(WSAStartup(MAKEWORD(2,2),&wsaData)!=0)
         {
@@ -125,7 +125,7 @@ public:
         SERVER_MESSAGES.push_back("SERVER::SERVER_STARTED");
         SERVER_MESSAGES.push_back("SERVER::AWAITING_CONNECTIONS");
 
-        std::thread thread_run(&Server::run,this,serverSocket);
+        std::thread thread_run(&NetworkServer::run,this,serverSocket);
         thread_run.detach();
     };
 
@@ -328,6 +328,23 @@ public:
         GAMEOBJECT = gameObject;
     };
 
+    int detect_collision_wall_identify(Window* handle_window){
+        float height = GAMEOBJECT->return_gameobject_sprite().size()-1;
+        float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
+        float padding = 1;
+
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_window->return_int_window_width()-padding)
+            return 11; // Right Wall
+        if( GAMEOBJECT->return_float_gameobject_xpos() <= padding)
+            return 12; // Left Wall
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_window->return_int_window_height()-2)
+            return 13; // Bottom Wall
+        if( GAMEOBJECT->return_float_gameobject_ypos() <= padding)
+            return 14; // Top Wall
+        else
+            return 10;
+    };
+
     void detect_collision_wall_stop(Window* handle_window){
         float height = GAMEOBJECT->return_gameobject_sprite().size()-1;
         float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
@@ -374,7 +391,7 @@ public:
     };
 };
 
-class User
+class UserInput
 {
 private:
     bool PRESSED = !PRESSED;
@@ -408,52 +425,46 @@ public:
     };
 };
 
-class MainMenu
+class Menu
 {
 private:
     Window* HANDLE_WINDOW;
-    User* USER;
+    UserInput* HANDLE_USER_INPUT;
 
     Sprite* SPRITE_TITLE;
     Sprite* SPRITE_OPTIONS;
 
+    int selection = 0;
+
 public:
-    MainMenu(User* user,Window* handle_window,Sprite* sprite_title, Sprite* sprite_options)
+    Menu(UserInput* handle_userInput,Window* handle_window,Sprite* sprite_title, Sprite* sprite_options)
     {
-        USER = user;
+        HANDLE_USER_INPUT = handle_userInput;
         HANDLE_WINDOW = handle_window;
 
         SPRITE_TITLE = sprite_title;
         SPRITE_OPTIONS = sprite_options;
     };
 
-    void run()
+    int run()
     {
-        // ##############################################################################
-        // Start MainMenu Loop
-        // ##############################################################################
-        int selection = 0;
         while(true)
         {
-            // Input
-            if(USER->quit()==1){}
-            if(USER->mainMenu_scroll() == 11){
-                if(selection<=0)
-                    selection=0;
-                else
-                    selection = selection - 1;
+            //Input
+            if(HANDLE_USER_INPUT->quit()==1){return 100;}
+            if(HANDLE_USER_INPUT->mainMenu_scroll() == 11){
+                if(selection>0)
+                    selection--;
             }
-            if(USER->mainMenu_scroll() == 10){
-                if(selection>=3)
-                    selection=3;
-                else
-                    selection = selection + 1;
+            if(HANDLE_USER_INPUT->mainMenu_scroll() == 10){
+                if(selection<3)
+                    selection++;
             }
-            if(USER->mainMenu_select()==1){
-                if(selection == 0){}
-                if(selection == 1){}
-                if(selection == 2){}
-                if(selection == 3){}
+            if(HANDLE_USER_INPUT->mainMenu_select()==1){
+                if(selection == 0){return 101;}
+                if(selection == 1){return 102;}
+                if(selection == 2){return 103;}
+                if(selection == 3){return 104;}
             }
             
             // Render
@@ -483,48 +494,32 @@ public:
                 render_options.push_back(SPRITE_OPTIONS->return_sprite()[6]);
             }
            
+            int margin = 5;
             HANDLE_WINDOW->buffer_clear();
             HANDLE_WINDOW->drawBorder('#');
-            HANDLE_WINDOW->drawSprite(int(HANDLE_WINDOW->return_int_window_width()/2) - int(SPRITE_TITLE->return_sprite()[0].length()/2),5,SPRITE_TITLE->return_sprite());
-            HANDLE_WINDOW->drawSprite(int(HANDLE_WINDOW->return_int_window_width()/2) - int(SPRITE_OPTIONS->return_sprite()[0].length()/2),int(5+SPRITE_TITLE->return_sprite().size()+3),render_options);
-            
+            HANDLE_WINDOW->drawSprite(int(HANDLE_WINDOW->return_int_window_width()/2) - int(SPRITE_TITLE->return_sprite()[0].length()/2),margin,SPRITE_TITLE->return_sprite());
+            HANDLE_WINDOW->drawSprite(int(HANDLE_WINDOW->return_int_window_width()/2) - int(SPRITE_OPTIONS->return_sprite()[0].length()/2),int(margin+SPRITE_TITLE->return_sprite().size()+3),render_options);
             HANDLE_WINDOW->buffer_swap();
             HANDLE_WINDOW->render();
         }
-        // ##############################################################################
-        // End MainMenu Loop
-        // ##############################################################################
-    };
-
-    void gameQuit(){
-        HANDLE_WINDOW->buffer_clear();
-        HANDLE_WINDOW->drawBorder('#');
-        HANDLE_WINDOW->drawText(65,int(HANDLE_WINDOW->return_int_window_width()/2) - int(sizeof("GAME OVER")/2),"GAME OVER");
-        HANDLE_WINDOW->render();
     };
 };
 
-
-class Game
+class GameState
 {
 private:
-    bool GAMEACTIVE = true;
-    Window HANDLE_WINDOW;
-    User USER;
+    UserInput* HANDLE_USER_INPUT;
+    Window* HANDLE_WINDOW;
 
+    int SCORE_PLAYER_1 = 0;
+    int SCORE_PLAYER_2 = 0;
 public:
-    Game(): HANDLE_WINDOW(150,30){};
-
-    void run(){
-        Sprite sprite_title("./assets/sprite_mainmenu_title.txt");
-        Sprite sprite_options("./assets/sprite_mainmenu_options.txt");
-
-        MainMenu mainmenu(&USER, &HANDLE_WINDOW, &sprite_title, &sprite_options);
-
-        mainmenu.run();
+    GameState(UserInput* handle_userInput,Window* handle_window){
+        HANDLE_USER_INPUT = handle_userInput;
+        HANDLE_WINDOW = handle_window;
     };
 
-    void gameLoop(){
+    void run(){
         Sprite sprite_player("./assets/sprite_player.txt");
         Sprite sprite_ball("./assets/sprite_ball.txt");
         
@@ -534,8 +529,8 @@ public:
 
         player_1.set_gameobject_velocity_yaxis(0.25);
         player_2.set_gameobject_velocity_yaxis(-0.25);
-        ball.set_gameobject_velocity_xaxis(0.25);
-        ball.set_gameobject_velocity_yaxis(0.25);
+        ball.set_gameobject_velocity_xaxis(0.75);
+        ball.set_gameobject_velocity_yaxis(0.75);
 
         Physics player1_physics(&player_1);
         Physics player2_physics(&player_2);
@@ -548,11 +543,20 @@ public:
         // ######################################################################################
         // Game Loop
         // ######################################################################################
-        while(true)
+        bool gameloop = true;
+        while(gameloop)
         {   
             //Framerate Limiter
             auto now = std::chrono::system_clock::now();
             std::this_thread::sleep_until( now + std::chrono::milliseconds(3) );
+
+            //Input
+            if(HANDLE_USER_INPUT->quit()==1){
+                gameloop = !gameloop;
+                //Framerate Limiter
+                auto now = std::chrono::system_clock::now();
+                std::this_thread::sleep_until( now + std::chrono::milliseconds(20) );
+            }
 
             // Physics
             player1_physics.force_simple_y_axis(player_1.return_float_gameobject_velocity_yaxis());
@@ -561,23 +565,34 @@ public:
             ball_physics.force_simple_y_axis(ball.return_float_gameobject_velocity_yaxis());
 
             // Collision
-            player1_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
-            player2_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
-            ball_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
+            player1_collision.detect_collision_wall_bounce(HANDLE_WINDOW);
+            player2_collision.detect_collision_wall_bounce(HANDLE_WINDOW);
+            ball_collision.detect_collision_wall_bounce(HANDLE_WINDOW);
+            
+            if(ball_collision.detect_collision_wall_identify(HANDLE_WINDOW) == 12){
+                SCORE_PLAYER_2++;
+            }
+            if(ball_collision.detect_collision_wall_identify(HANDLE_WINDOW) == 11){
+                SCORE_PLAYER_1++;
+            }
 
             ball_collision.detect_collision_player_bounce(&player_1);
             ball_collision.detect_collision_player_bounce(&player_2);
 
-            // Input
-            if(USER.quit()==1){break;}
+            std::string scoreboard_player_1 = "Player 1: " + std::to_string(SCORE_PLAYER_1);
+            std::string scoreboard_player_2 = "Player 2: " + std::to_string(SCORE_PLAYER_2);
+            std::string score_line = scoreboard_player_1 + "   VS   " + scoreboard_player_2;
 
             // Render
-            HANDLE_WINDOW.buffer_clear();
-            HANDLE_WINDOW.drawBorder('#');
-            HANDLE_WINDOW.drawSprite(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_gameobject_sprite());
-            HANDLE_WINDOW.drawSprite(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_gameobject_sprite());
-            HANDLE_WINDOW.drawSprite(ball.return_int_gameobject_xpos(),ball.return_int_gameobject_ypos(),ball.return_gameobject_sprite());
-            HANDLE_WINDOW.render();
+            HANDLE_WINDOW->buffer_clear();
+            HANDLE_WINDOW->drawBorder('#');
+            HANDLE_WINDOW->drawSprite(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_gameobject_sprite());
+            HANDLE_WINDOW->drawSprite(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_gameobject_sprite());
+            HANDLE_WINDOW->drawSprite(ball.return_int_gameobject_xpos(),ball.return_int_gameobject_ypos(),ball.return_gameobject_sprite());
+
+            HANDLE_WINDOW->drawText(int(HANDLE_WINDOW->return_int_window_width()/2)-(score_line.length()/2),10,score_line);
+
+            HANDLE_WINDOW->render();
         }
         // ######################################################################################
         // End of Game Loop
@@ -585,9 +600,44 @@ public:
     };
 };
 
+class Game
+{
+private:
+    bool GAMEACTIVE = true;
+    Window HANDLE_WINDOW;
+    UserInput HANDLE_USER_INPUT;
+
+public:
+    Game(): HANDLE_WINDOW(150,30){};
+
+    void play(){
+        Sprite sprite_title("./assets/sprite_mainmenu_title.txt");
+        Sprite sprite_options("./assets/sprite_mainmenu_options.txt");
+
+        Menu mainmenu(&HANDLE_USER_INPUT, &HANDLE_WINDOW, &sprite_title, &sprite_options);
+        GameState gameState(&HANDLE_USER_INPUT, &HANDLE_WINDOW);
+
+        // Main Loop
+        while(GAMEACTIVE)
+        {
+            if(mainmenu.run() == 100){GAMEACTIVE = !GAMEACTIVE;}
+            if(mainmenu.run() == 101){gameState.run();}
+            if(mainmenu.run() == 102){}
+            if(mainmenu.run() == 103){}
+            if(mainmenu.run() == 104){GAMEACTIVE = !GAMEACTIVE;}
+        }
+
+        // Closing Screen...
+        HANDLE_WINDOW.buffer_clear();
+        HANDLE_WINDOW.drawBorder('#');
+        HANDLE_WINDOW.drawText(int(HANDLE_WINDOW.return_int_window_width()/2) - int(sizeof("GAME OVER")/2),5,"GAME OVER");
+        HANDLE_WINDOW.render();
+    };
+};
+
 int main(int argc,char* argv[])
 {
     Game game;
-    game.run();
+    game.play();
     return 0;
 };
