@@ -143,11 +143,11 @@ public:
     std::vector<std::string> return_server_messages(){return SERVER_MESSAGES;};
 };
 
-class Window
+class Console
 {
 private:
-    int WINDOW_WIDTH;
-    int WINDOW_HEIGHT;
+    int CONSOLE_WIDTH;
+    int CONSOLE_HEIGHT;
     
     std::vector<std::string> BUFFER_FRONT;
     std::vector<std::string> BUFFER_BACK;
@@ -155,18 +155,18 @@ private:
     bool BUFFERSWAP = true;
 
 public:
-    Window(int width,int height){
-        WINDOW_WIDTH = width;
-        WINDOW_HEIGHT = height;
+    Console(int width,int height){
+        CONSOLE_WIDTH = width;
+        CONSOLE_HEIGHT = height;
         
-        for(int y=0;y<WINDOW_HEIGHT;y++){
-            std::string line(WINDOW_WIDTH,' ');
+        for(int y=0;y<CONSOLE_HEIGHT;y++){
+            std::string line(CONSOLE_WIDTH,' ');
             BUFFER_FRONT.push_back(line);
             BUFFER_BACK.push_back(line);
         }
     };
 
-    ~Window(){
+    ~Console(){
         BUFFER_FRONT.clear();
         BUFFER_BACK.clear();
     };
@@ -199,9 +199,9 @@ public:
     };
 
     void drawBorder(char character){
-        for( int y=0; y<WINDOW_HEIGHT; y++){
-            for( int x=0; x<WINDOW_WIDTH; x++){
-                if( x==0 || x==WINDOW_WIDTH-1 || y==0 || y==WINDOW_HEIGHT-1)
+        for( int y=0; y<CONSOLE_HEIGHT; y++){
+            for( int x=0; x<CONSOLE_WIDTH; x++){
+                if( x==0 || x==CONSOLE_WIDTH-1 || y==0 || y==CONSOLE_HEIGHT-1)
                     if(BUFFERSWAP)             
                         BUFFER_BACK[y][x] = character;
                     else
@@ -211,8 +211,8 @@ public:
     };
 
     void buffer_clear(){
-        for(int y=0;y<WINDOW_HEIGHT;y++){
-            for(int x=0;x<WINDOW_WIDTH;x++){
+        for(int y=0;y<CONSOLE_HEIGHT;y++){
+            for(int x=0;x<CONSOLE_WIDTH;x++){
                 if(BUFFERSWAP)
                     BUFFER_BACK[y][x] = ' ';
                 else
@@ -233,8 +233,8 @@ public:
         COORD coord = {0,0};
         SetConsoleCursorPosition(handle_console,coord);
 
-        for(int y=0;y<WINDOW_HEIGHT;y++){
-            for(int x=0;x<WINDOW_WIDTH;x++){
+        for(int y=0;y<CONSOLE_HEIGHT;y++){
+            for(int x=0;x<CONSOLE_WIDTH;x++){
                 if(BUFFERSWAP)
                     std::cout << BUFFER_BACK[y][x];
                 else
@@ -245,8 +245,8 @@ public:
         std::cout << std::flush;
     };
 
-    int return_int_window_width(){ return WINDOW_WIDTH; };
-    int return_int_window_height(){ return WINDOW_HEIGHT; };
+    int return_int_window_width(){ return CONSOLE_WIDTH; };
+    int return_int_window_height(){ return CONSOLE_HEIGHT; };
 };
 
 class Sprite
@@ -339,16 +339,16 @@ public:
         GAMEOBJECT = gameObject;
     };
 
-    int detect_collision_wall_identify(Window* handle_window){
+    int detect_collision_wall_identify(Console* handle_console){
         float height = GAMEOBJECT->return_gameobject_sprite().size()-1;
         float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
         float padding = 1;
 
-        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_window->return_int_window_width()-padding)
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_console->return_int_window_width()-padding)
             return 11; // Right Wall
         if( GAMEOBJECT->return_float_gameobject_xpos() <= padding)
             return 12; // Left Wall
-        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_window->return_int_window_height()-2)
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_console->return_int_window_height()-2)
             return 13; // Bottom Wall
         if( GAMEOBJECT->return_float_gameobject_ypos() <= padding)
             return 14; // Top Wall
@@ -356,32 +356,32 @@ public:
             return 10;
     };
 
-    void detect_collision_wall_stop(Window* handle_window){
+    void detect_collision_wall_stop(Console* handle_console){
         float height = GAMEOBJECT->return_gameobject_sprite().size()-1;
         float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
         float padding = 1;
 
-        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_window->return_int_window_width()-padding) // Right Wall
-            GAMEOBJECT->set_gameobject_xpos(handle_window->return_int_window_width()-padding-width);
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_console->return_int_window_width()-padding) // Right Wall
+            GAMEOBJECT->set_gameobject_xpos(handle_console->return_int_window_width()-padding-width);
         if( GAMEOBJECT->return_float_gameobject_xpos() <= padding) // Left Wall
             GAMEOBJECT->set_gameobject_xpos(padding);
-        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_window->return_int_window_height()-2) // Bottom Wall
-            GAMEOBJECT->set_gameobject_ypos(handle_window->return_int_window_height()-padding-height);
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_console->return_int_window_height()-2) // Bottom Wall
+            GAMEOBJECT->set_gameobject_ypos(handle_console->return_int_window_height()-padding-height);
         if( GAMEOBJECT->return_float_gameobject_ypos() <= padding) // Top Wall
             GAMEOBJECT->set_gameobject_ypos(padding+1);
     };
 
-    void detect_collision_wall_bounce(Window* handle_window){
+    void detect_collision_wall_bounce(Console* handle_console){
 
         float height = GAMEOBJECT->return_gameobject_sprite().size()-1;
         float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
         float padding = 1;
 
-        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_window->return_int_window_width()-padding) // Right Wall
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_console->return_int_window_width()-padding) // Right Wall
             GAMEOBJECT->set_gameobject_velocity_xaxis(GAMEOBJECT->return_float_gameobject_velocity_xaxis()*-1);
         if( GAMEOBJECT->return_float_gameobject_xpos() <= padding) // Left Wall
             GAMEOBJECT->set_gameobject_velocity_xaxis(GAMEOBJECT->return_float_gameobject_velocity_xaxis()*-1);
-        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_window->return_int_window_height()-2) // Bottom Wall
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_console->return_int_window_height()-2) // Bottom Wall
             GAMEOBJECT->set_gameobject_velocity_yaxis(GAMEOBJECT->return_float_gameobject_velocity_yaxis()*-1);
         if( GAMEOBJECT->return_float_gameobject_ypos() <= padding+1) // Top Wall
             GAMEOBJECT->set_gameobject_velocity_yaxis(GAMEOBJECT->return_float_gameobject_velocity_yaxis()*-1);
@@ -442,7 +442,7 @@ public:
 class Menu
 {
 private:
-    Window* HANDLE_WINDOW;
+    Console* HANDLE_CONSOLE;
     UserInput* HANDLE_USER_INPUT;
 
     Sprite* SPRITE_TITLE;
@@ -451,10 +451,10 @@ private:
     int selection = 0;
 
 public:
-    Menu(UserInput* handle_userInput,Window* handle_window,Sprite* sprite_title, Sprite* sprite_options)
+    Menu(UserInput* handle_userInput,Console* handle_console,Sprite* sprite_title, Sprite* sprite_options)
     {
         HANDLE_USER_INPUT = handle_userInput;
-        HANDLE_WINDOW = handle_window;
+        HANDLE_CONSOLE = handle_console;
 
         SPRITE_TITLE = sprite_title;
         SPRITE_OPTIONS = sprite_options;
@@ -510,12 +510,12 @@ public:
             }
            
             int margin = 5;
-            HANDLE_WINDOW->buffer_clear();
-            HANDLE_WINDOW->drawBorder('#');
-            HANDLE_WINDOW->drawSprite(int(HANDLE_WINDOW->return_int_window_width()/2) - int(SPRITE_TITLE->return_sprite()[0].length()/2),margin,SPRITE_TITLE->return_sprite());
-            HANDLE_WINDOW->drawSprite(int(HANDLE_WINDOW->return_int_window_width()/2) - int(SPRITE_OPTIONS->return_sprite()[0].length()/2),int(margin+SPRITE_TITLE->return_sprite().size()+3),render_options);
-            HANDLE_WINDOW->buffer_swap();
-            HANDLE_WINDOW->render();
+            HANDLE_CONSOLE->buffer_clear();
+            HANDLE_CONSOLE->drawBorder('#');
+            HANDLE_CONSOLE->drawSprite(int(HANDLE_CONSOLE->return_int_window_width()/2) - int(SPRITE_TITLE->return_sprite()[0].length()/2),margin,SPRITE_TITLE->return_sprite());
+            HANDLE_CONSOLE->drawSprite(int(HANDLE_CONSOLE->return_int_window_width()/2) - int(SPRITE_OPTIONS->return_sprite()[0].length()/2),int(margin+SPRITE_TITLE->return_sprite().size()+3),render_options);
+            HANDLE_CONSOLE->buffer_swap();
+            HANDLE_CONSOLE->render();
         }
         // ######################################################################################
         // End Menu Loop
@@ -529,7 +529,7 @@ class Game
 {
 private:
     bool GAMEACTIVE = true;
-    Window HANDLE_WINDOW;
+    Console HANDLE_CONSOLE;
     UserInput HANDLE_USER_INPUT;
 
     int PLAYER_1_SCORE = 0;
@@ -549,7 +549,7 @@ private:
     float BALL_VELOCITY_YAXIS = 0.9f;
 
 public:
-    Game(): HANDLE_WINDOW(150,30){};
+    Game(): HANDLE_CONSOLE(150,30){};
 
     void gameLoop(){
         Sprite sprite_player("./assets/sprite_player.txt");
@@ -591,29 +591,29 @@ public:
             ball_physics.force_simple_y_axis(ball.return_float_gameobject_velocity_yaxis());
 
             // Collision
-            player1_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
-            player2_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
+            player1_collision.detect_collision_wall_bounce(&HANDLE_CONSOLE);
+            player2_collision.detect_collision_wall_bounce(&HANDLE_CONSOLE);
 
-            ball_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
+            ball_collision.detect_collision_wall_bounce(&HANDLE_CONSOLE);
             ball_collision.detect_collision_player_bounce(&player_1);
             ball_collision.detect_collision_player_bounce(&player_2);
 
             // Game Logic
-            if(ball_collision.detect_collision_wall_identify(&HANDLE_WINDOW) == 12){PLAYER_2_SCORE++;}
-            if(ball_collision.detect_collision_wall_identify(&HANDLE_WINDOW) == 11){PLAYER_1_SCORE++;}
+            if(ball_collision.detect_collision_wall_identify(&HANDLE_CONSOLE) == 12){PLAYER_2_SCORE++;}
+            if(ball_collision.detect_collision_wall_identify(&HANDLE_CONSOLE) == 11){PLAYER_1_SCORE++;}
 
             std::string scoreboard_player_1 = "Player 1: " + std::to_string(PLAYER_1_SCORE);
             std::string scoreboard_player_2 = "Player 2: " + std::to_string(PLAYER_2_SCORE);
             std::string score_line = scoreboard_player_1 + "   VS   " + scoreboard_player_2;
 
             // Render
-            HANDLE_WINDOW.buffer_clear();
-            HANDLE_WINDOW.drawBorder('#');
-            HANDLE_WINDOW.drawSprite(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_gameobject_sprite());
-            HANDLE_WINDOW.drawSprite(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_gameobject_sprite());
-            HANDLE_WINDOW.drawSprite(ball.return_int_gameobject_xpos(),ball.return_int_gameobject_ypos(),ball.return_gameobject_sprite());
-            HANDLE_WINDOW.drawText(int(HANDLE_WINDOW.return_int_window_width()/2)-(score_line.length()/2),10,score_line);
-            HANDLE_WINDOW.render();
+            HANDLE_CONSOLE.buffer_clear();
+            HANDLE_CONSOLE.drawBorder('#');
+            HANDLE_CONSOLE.drawSprite(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_gameobject_sprite());
+            HANDLE_CONSOLE.drawSprite(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_gameobject_sprite());
+            HANDLE_CONSOLE.drawSprite(ball.return_int_gameobject_xpos(),ball.return_int_gameobject_ypos(),ball.return_gameobject_sprite());
+            HANDLE_CONSOLE.drawText(int(HANDLE_CONSOLE.return_int_window_width()/2)-(score_line.length()/2),10,score_line);
+            HANDLE_CONSOLE.render();
         }
         // ######################################################################################
         // End Gameloop
@@ -624,7 +624,7 @@ public:
         Sprite sprite_title("./assets/sprite_mainmenu_title.txt");
         Sprite sprite_options("./assets/sprite_mainmenu_options.txt");
 
-        Menu mainmenu(&HANDLE_USER_INPUT, &HANDLE_WINDOW, &sprite_title, &sprite_options);
+        Menu mainmenu(&HANDLE_USER_INPUT, &HANDLE_CONSOLE, &sprite_title, &sprite_options);
 
         // ######################################################################################
         // Start Main Loop
@@ -642,10 +642,10 @@ public:
         // ######################################################################################
 
         // Closing Screen...
-        HANDLE_WINDOW.buffer_clear();
-        HANDLE_WINDOW.drawBorder('#');
-        HANDLE_WINDOW.drawText(int(HANDLE_WINDOW.return_int_window_width()/2) - int(sizeof("GAME OVER")/2),5,"GAME OVER");
-        HANDLE_WINDOW.render();
+        HANDLE_CONSOLE.buffer_clear();
+        HANDLE_CONSOLE.drawBorder('#');
+        HANDLE_CONSOLE.drawText(int(HANDLE_CONSOLE.return_int_window_width()/2) - int(sizeof("GAME OVER")/2),5,"GAME OVER");
+        HANDLE_CONSOLE.render();
     };
 };
 
