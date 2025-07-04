@@ -4,12 +4,11 @@ TITLE:
 CPP_TEMPLATE_GAME_2D_BASIC
 
 DESCRIPTION:
-Basic 2D Game Engine
-
-Gameobject can render within window bounds
+- Basic 2D Game Engine
+- Demo is Pong based
 
 TODO:
-Need to add NetworkClient Class
+- Need to add NetworkClient Class
 
 #################################################################
 */
@@ -37,7 +36,7 @@ private:
     void run(SOCKET serverSocket){
 
         // ######################################################################################
-        // Client Handle
+        // Start Client Handle
         // ######################################################################################
 
         sockaddr_in clientAddress;
@@ -76,7 +75,7 @@ private:
         SERVER_MESSAGES.push_back("CLIENT::DISCONNECTED");
         
         // ######################################################################################
-        // End of Client Handle
+        // End Client Handle
         // ######################################################################################
 
         closesocket(serverSocket);
@@ -362,14 +361,14 @@ public:
         float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
         float padding = 1;
 
-        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_window->return_int_window_width()-padding)
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_window->return_int_window_width()-padding) // Right Wall
             GAMEOBJECT->set_gameobject_xpos(handle_window->return_int_window_width()-padding-width);
-        if( GAMEOBJECT->return_float_gameobject_xpos() <= padding)
+        if( GAMEOBJECT->return_float_gameobject_xpos() <= padding) // Left Wall
             GAMEOBJECT->set_gameobject_xpos(padding);
-        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_window->return_int_window_height()-2)
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_window->return_int_window_height()-2) // Bottom Wall
             GAMEOBJECT->set_gameobject_ypos(handle_window->return_int_window_height()-padding-height);
-        if( GAMEOBJECT->return_float_gameobject_ypos() <= padding)
-            GAMEOBJECT->set_gameobject_ypos(padding);
+        if( GAMEOBJECT->return_float_gameobject_ypos() <= padding) // Top Wall
+            GAMEOBJECT->set_gameobject_ypos(padding+1);
     };
 
     void detect_collision_wall_bounce(Window* handle_window){
@@ -378,13 +377,13 @@ public:
         float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
         float padding = 1;
 
-        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_window->return_int_window_width()-padding)
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_window->return_int_window_width()-padding) // Right Wall
             GAMEOBJECT->set_gameobject_velocity_xaxis(GAMEOBJECT->return_float_gameobject_velocity_xaxis()*-1);
-        if( GAMEOBJECT->return_float_gameobject_xpos() <= padding)
+        if( GAMEOBJECT->return_float_gameobject_xpos() <= padding) // Left Wall
             GAMEOBJECT->set_gameobject_velocity_xaxis(GAMEOBJECT->return_float_gameobject_velocity_xaxis()*-1);
-        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_window->return_int_window_height()-2)
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_window->return_int_window_height()-2) // Bottom Wall
             GAMEOBJECT->set_gameobject_velocity_yaxis(GAMEOBJECT->return_float_gameobject_velocity_yaxis()*-1);
-        if( GAMEOBJECT->return_float_gameobject_ypos() <= padding)
+        if( GAMEOBJECT->return_float_gameobject_ypos() <= padding+1) // Top Wall
             GAMEOBJECT->set_gameobject_velocity_yaxis(GAMEOBJECT->return_float_gameobject_velocity_yaxis()*-1);
     };
 
@@ -410,6 +409,9 @@ private:
 
 public:
     bool quit(){
+        auto now = std::chrono::system_clock::now();
+        std::this_thread::sleep_until( now + std::chrono::milliseconds(25) );
+
         if(GetAsyncKeyState(VK_ESCAPE) & 0x8000)
             return true;
         else
@@ -460,9 +462,11 @@ public:
 
     int run()
     {
+        // ######################################################################################
+        // Start Menu Loop
+        // ######################################################################################
         while(true)
         {
-            //Input
             if(HANDLE_USER_INPUT->quit()==1){return 100;}
             if(HANDLE_USER_INPUT->mainMenu_scroll() == 11){
                 if(selection>0)
@@ -479,7 +483,6 @@ public:
                 if(selection == 3){return 104;}
             }
             
-            // Render
             std::vector<std::string> render_options;
             if(selection == 0){
                 render_options.push_back(SPRITE_OPTIONS->return_sprite()[0]);
@@ -514,35 +517,52 @@ public:
             HANDLE_WINDOW->buffer_swap();
             HANDLE_WINDOW->render();
         }
+        // ######################################################################################
+        // End Menu Loop
+        // ######################################################################################
     };
+    
 };
 
-class GameState
+
+class Game
 {
 private:
-    UserInput* HANDLE_USER_INPUT;
-    Window* HANDLE_WINDOW;
+    bool GAMEACTIVE = true;
+    Window HANDLE_WINDOW;
+    UserInput HANDLE_USER_INPUT;
 
-    int SCORE_PLAYER_1 = 0;
-    int SCORE_PLAYER_2 = 0;
+    int PLAYER_1_SCORE = 0;
+    int PLAYER_2_SCORE = 0;
+
+    float PLAYER_1_XPOS = 20.0f;
+    float PLAYER_1_YPOS = 10.0f;
+    float PLAYER_1_VELOCITY_YAXIS = 0.75f;
+
+    float PLAYER_2_XPOS = 130.0f;
+    float PLAYER_2_YPOS = 10.0f;
+    float PLAYER_2_VELOCITY_YAXIS = -0.75f;
+
+    float BALL_XPOS = 75.0f;
+    float BALL_YPOS = 10.0f;
+    float BALL_VELOCITY_XAXIS = 0.9f;
+    float BALL_VELOCITY_YAXIS = 0.9f;
+
 public:
-    GameState(UserInput* handle_userInput,Window* handle_window){
-        HANDLE_USER_INPUT = handle_userInput;
-        HANDLE_WINDOW = handle_window;
-    };
+    Game(): HANDLE_WINDOW(150,30){};
 
-    void run(){
+    void gameLoop(){
         Sprite sprite_player("./assets/sprite_player.txt");
         Sprite sprite_ball("./assets/sprite_ball.txt");
         
-        GameObject player_1("player_1",20.0f,10.0f,sprite_player.return_sprite());
-        GameObject player_2("player_2",130.0f,10.0f,sprite_player.return_sprite());
-        GameObject ball("ball",75.0f,10.0f,sprite_ball.return_sprite());
+        GameObject player_1("player_1",PLAYER_1_XPOS,PLAYER_1_YPOS,sprite_player.return_sprite());
+        GameObject player_2("player_2",PLAYER_2_XPOS,PLAYER_2_YPOS,sprite_player.return_sprite());
+        GameObject ball("ball",BALL_XPOS,BALL_YPOS,sprite_ball.return_sprite());
 
-        player_1.set_gameobject_velocity_yaxis(0.25);
-        player_2.set_gameobject_velocity_yaxis(-0.25);
-        ball.set_gameobject_velocity_xaxis(0.75);
-        ball.set_gameobject_velocity_yaxis(0.75);
+        player_1.set_gameobject_velocity_yaxis(PLAYER_1_VELOCITY_YAXIS);
+        player_2.set_gameobject_velocity_yaxis(PLAYER_2_VELOCITY_YAXIS);
+        ball.set_gameobject_velocity_xaxis(BALL_VELOCITY_XAXIS);
+        ball.set_gameobject_velocity_yaxis(BALL_VELOCITY_YAXIS);
 
         Physics player1_physics(&player_1);
         Physics player2_physics(&player_2);
@@ -553,22 +573,16 @@ public:
         Collision ball_collision(&ball);
         
         // ######################################################################################
-        // Game Loop
+        // Start Gameloop
         // ######################################################################################
-        bool gameloop = true;
-        while(gameloop)
+        while(true)
         {   
-            //Framerate Limiter
+            // Framerate Limiter
             auto now = std::chrono::system_clock::now();
             std::this_thread::sleep_until( now + std::chrono::milliseconds(3) );
 
-            //Input
-            if(HANDLE_USER_INPUT->quit()==1){
-                gameloop = !gameloop;
-                //Framerate Limiter
-                auto now = std::chrono::system_clock::now();
-                std::this_thread::sleep_until( now + std::chrono::milliseconds(20) );
-            }
+            // Input
+            if(HANDLE_USER_INPUT.quit()==1){break;}
 
             // Physics
             player1_physics.force_simple_y_axis(player_1.return_float_gameobject_velocity_yaxis());
@@ -577,60 +591,55 @@ public:
             ball_physics.force_simple_y_axis(ball.return_float_gameobject_velocity_yaxis());
 
             // Collision
-            player1_collision.detect_collision_wall_bounce(HANDLE_WINDOW);
-            player2_collision.detect_collision_wall_bounce(HANDLE_WINDOW);
+            player1_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
+            player2_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
 
-            ball_collision.detect_collision_wall_bounce(HANDLE_WINDOW);
+            ball_collision.detect_collision_wall_bounce(&HANDLE_WINDOW);
             ball_collision.detect_collision_player_bounce(&player_1);
             ball_collision.detect_collision_player_bounce(&player_2);
-            if(ball_collision.detect_collision_wall_identify(HANDLE_WINDOW) == 12){SCORE_PLAYER_2++;}
-            if(ball_collision.detect_collision_wall_identify(HANDLE_WINDOW) == 11){SCORE_PLAYER_1++;}
 
-            std::string scoreboard_player_1 = "Player 1: " + std::to_string(SCORE_PLAYER_1);
-            std::string scoreboard_player_2 = "Player 2: " + std::to_string(SCORE_PLAYER_2);
+            // Game Logic
+            if(ball_collision.detect_collision_wall_identify(&HANDLE_WINDOW) == 12){PLAYER_2_SCORE++;}
+            if(ball_collision.detect_collision_wall_identify(&HANDLE_WINDOW) == 11){PLAYER_1_SCORE++;}
+
+            std::string scoreboard_player_1 = "Player 1: " + std::to_string(PLAYER_1_SCORE);
+            std::string scoreboard_player_2 = "Player 2: " + std::to_string(PLAYER_2_SCORE);
             std::string score_line = scoreboard_player_1 + "   VS   " + scoreboard_player_2;
 
             // Render
-            HANDLE_WINDOW->buffer_clear();
-            HANDLE_WINDOW->drawBorder('#');
-            HANDLE_WINDOW->drawSprite(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_gameobject_sprite());
-            HANDLE_WINDOW->drawSprite(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_gameobject_sprite());
-            HANDLE_WINDOW->drawSprite(ball.return_int_gameobject_xpos(),ball.return_int_gameobject_ypos(),ball.return_gameobject_sprite());
-            HANDLE_WINDOW->drawText(int(HANDLE_WINDOW->return_int_window_width()/2)-(score_line.length()/2),10,score_line);
-            HANDLE_WINDOW->render();
+            HANDLE_WINDOW.buffer_clear();
+            HANDLE_WINDOW.drawBorder('#');
+            HANDLE_WINDOW.drawSprite(player_1.return_int_gameobject_xpos(),player_1.return_int_gameobject_ypos(),player_1.return_gameobject_sprite());
+            HANDLE_WINDOW.drawSprite(player_2.return_int_gameobject_xpos(),player_2.return_int_gameobject_ypos(),player_2.return_gameobject_sprite());
+            HANDLE_WINDOW.drawSprite(ball.return_int_gameobject_xpos(),ball.return_int_gameobject_ypos(),ball.return_gameobject_sprite());
+            HANDLE_WINDOW.drawText(int(HANDLE_WINDOW.return_int_window_width()/2)-(score_line.length()/2),10,score_line);
+            HANDLE_WINDOW.render();
         }
         // ######################################################################################
-        // End of Game Loop
+        // End Gameloop
         // ######################################################################################
     };
-};
-
-class Game
-{
-private:
-    bool GAMEACTIVE = true;
-    Window HANDLE_WINDOW;
-    UserInput HANDLE_USER_INPUT;
-
-public:
-    Game(): HANDLE_WINDOW(150,30){};
 
     void play(){
         Sprite sprite_title("./assets/sprite_mainmenu_title.txt");
         Sprite sprite_options("./assets/sprite_mainmenu_options.txt");
 
         Menu mainmenu(&HANDLE_USER_INPUT, &HANDLE_WINDOW, &sprite_title, &sprite_options);
-        GameState gameState(&HANDLE_USER_INPUT, &HANDLE_WINDOW);
 
-        // Main Loop
+        // ######################################################################################
+        // Start Main Loop
+        // ######################################################################################
         while(GAMEACTIVE)
         {
             if(mainmenu.run() == 100){GAMEACTIVE = !GAMEACTIVE;}
-            if(mainmenu.run() == 101){gameState.run();}
+            if(mainmenu.run() == 101){gameLoop();}
             if(mainmenu.run() == 102){}
             if(mainmenu.run() == 103){}
             if(mainmenu.run() == 104){GAMEACTIVE = !GAMEACTIVE;}
         }
+        // ######################################################################################
+        // End Main Loop
+        // ######################################################################################
 
         // Closing Screen...
         HANDLE_WINDOW.buffer_clear();
