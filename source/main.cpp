@@ -344,13 +344,13 @@ public:
         float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
         float padding = 1;
 
-        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_console->return_int_window_width()-padding)
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width > handle_console->return_int_window_width()-padding)
             return 11; // Right Wall
-        if( GAMEOBJECT->return_float_gameobject_xpos() <= padding)
+        if( GAMEOBJECT->return_float_gameobject_xpos() < padding)
             return 12; // Left Wall
-        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_console->return_int_window_height()-2)
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height > handle_console->return_int_window_height()-2)
             return 13; // Bottom Wall
-        if( GAMEOBJECT->return_float_gameobject_ypos() <= padding)
+        if( GAMEOBJECT->return_float_gameobject_ypos() < padding)
             return 14; // Top Wall
         else
             return 10;
@@ -359,31 +359,40 @@ public:
     void detect_collision_wall_stop(Console* handle_console){
         float height = GAMEOBJECT->return_gameobject_sprite().size()-1;
         float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
-        float padding = 1;
 
-        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_console->return_int_window_width()-padding) // Right Wall
-            GAMEOBJECT->set_gameobject_xpos(handle_console->return_int_window_width()-padding-width);
-        if( GAMEOBJECT->return_float_gameobject_xpos() <= padding) // Left Wall
-            GAMEOBJECT->set_gameobject_xpos(padding);
-        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_console->return_int_window_height()-2) // Bottom Wall
-            GAMEOBJECT->set_gameobject_ypos(handle_console->return_int_window_height()-padding-height);
-        if( GAMEOBJECT->return_float_gameobject_ypos() <= padding) // Top Wall
-            GAMEOBJECT->set_gameobject_ypos(padding+1);
+        // Right Wall
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width > handle_console->return_int_window_width()-1)
+            GAMEOBJECT->set_gameobject_xpos(handle_console->return_int_window_width()-width-1);
+        // Left Wall
+        if( GAMEOBJECT->return_float_gameobject_xpos() < 1) 
+            GAMEOBJECT->set_gameobject_xpos(1);
+        // Top Wall
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height > handle_console->return_int_window_height()-2)
+            GAMEOBJECT->set_gameobject_ypos(handle_console->return_int_window_height()-height-2);
+        // Bottom Wall
+        if( GAMEOBJECT->return_float_gameobject_ypos() < 1) 
+            GAMEOBJECT->set_gameobject_ypos(1);
     };
 
     void detect_collision_wall_bounce(Console* handle_console){
 
         float height = GAMEOBJECT->return_gameobject_sprite().size()-1;
         float width = GAMEOBJECT->return_gameobject_sprite()[0].length()-1;
-        float padding = 1;
 
-        if( GAMEOBJECT->return_float_gameobject_xpos()+width >= handle_console->return_int_window_width()-padding) // Right Wall
+        // Right Wall
+        if( GAMEOBJECT->return_float_gameobject_xpos()+width > handle_console->return_int_window_width()- 1) 
             GAMEOBJECT->set_gameobject_velocity_xaxis(GAMEOBJECT->return_float_gameobject_velocity_xaxis()*-1);
-        if( GAMEOBJECT->return_float_gameobject_xpos() <= padding) // Left Wall
+
+        // Left Wall
+        if( GAMEOBJECT->return_float_gameobject_xpos() < 1) 
             GAMEOBJECT->set_gameobject_velocity_xaxis(GAMEOBJECT->return_float_gameobject_velocity_xaxis()*-1);
-        if( GAMEOBJECT->return_float_gameobject_ypos()+height >= handle_console->return_int_window_height()-2) // Bottom Wall
+
+        // Bottom Wall
+        if( GAMEOBJECT->return_float_gameobject_ypos()+height > handle_console->return_int_window_height()-2) 
             GAMEOBJECT->set_gameobject_velocity_yaxis(GAMEOBJECT->return_float_gameobject_velocity_yaxis()*-1);
-        if( GAMEOBJECT->return_float_gameobject_ypos() <= padding+1) // Top Wall
+
+        // Top Wall
+        if( GAMEOBJECT->return_float_gameobject_ypos() < 2)
             GAMEOBJECT->set_gameobject_velocity_yaxis(GAMEOBJECT->return_float_gameobject_velocity_yaxis()*-1);
     };
 
@@ -419,7 +428,7 @@ public:
     };
 
     bool mainMenu_select(){
-        if(GetAsyncKeyState(VK_SPACE) &0x8000)
+        if(GetAsyncKeyState(VK_SPACE) &0x8000 || GetAsyncKeyState(VK_RETURN) & 0x8000)
             return true;
         else
             return false;
@@ -429,7 +438,7 @@ public:
         auto now = std::chrono::system_clock::now();
         std::this_thread::sleep_until( now + std::chrono::milliseconds(25) );
 
-        if(GetAsyncKeyState(VK_UP) & 0x8000){
+        if(GetAsyncKeyState(VK_UP) & 0x8000 ){
             return 11;
         }else if(GetAsyncKeyState(VK_DOWN) & 0x8000){
             return 10;
@@ -537,16 +546,16 @@ private:
 
     float PLAYER_1_XPOS = 20.0f;
     float PLAYER_1_YPOS = 10.0f;
-    float PLAYER_1_VELOCITY_YAXIS = 0.75f;
+    float PLAYER_1_VELOCITY_YAXIS = 1.50f;
 
     float PLAYER_2_XPOS = 130.0f;
     float PLAYER_2_YPOS = 10.0f;
-    float PLAYER_2_VELOCITY_YAXIS = -0.75f;
+    float PLAYER_2_VELOCITY_YAXIS = -1.50f;
 
-    float BALL_XPOS = 75.0f;
+    float BALL_XPOS = HANDLE_CONSOLE.return_int_window_width()/2-2;
     float BALL_YPOS = 10.0f;
-    float BALL_VELOCITY_XAXIS = 0.9f;
-    float BALL_VELOCITY_YAXIS = 0.9f;
+    float BALL_VELOCITY_XAXIS = -1.20f;
+    float BALL_VELOCITY_YAXIS = 1.20f;
 
 public:
     Game(): HANDLE_CONSOLE(150,30){};
@@ -583,24 +592,40 @@ public:
 
             // Input
             if(HANDLE_USER_INPUT.quit()==1){break;}
+            if(HANDLE_USER_INPUT.mainMenu_scroll()==11){player1_physics.force_simple_y_axis(-player_1.return_float_gameobject_velocity_yaxis());}
+            if(HANDLE_USER_INPUT.mainMenu_scroll()==10){player1_physics.force_simple_y_axis(player_1.return_float_gameobject_velocity_yaxis());}
+
+            if(player_2.return_float_gameobject_ypos()+player_2.return_gameobject_sprite().size()+1 < HANDLE_CONSOLE.return_int_window_height()){
+                player2_physics.force_simple_y_axis(ball.return_float_gameobject_velocity_yaxis()*1.10);
+            }else if(ball.return_float_gameobject_ypos() < HANDLE_CONSOLE.return_int_window_height()-player_2.return_gameobject_sprite().size() && ball.return_float_gameobject_velocity_yaxis() < 0){
+                player2_physics.force_simple_y_axis(ball.return_float_gameobject_velocity_yaxis()*.99);
+            }
 
             // Physics
-            player1_physics.force_simple_y_axis(player_1.return_float_gameobject_velocity_yaxis());
-            player2_physics.force_simple_y_axis(player_2.return_float_gameobject_velocity_yaxis());
             ball_physics.force_simple_x_axis(ball.return_float_gameobject_velocity_xaxis());
             ball_physics.force_simple_y_axis(ball.return_float_gameobject_velocity_yaxis());
 
             // Collision
-            player1_collision.detect_collision_wall_bounce(&HANDLE_CONSOLE);
-            player2_collision.detect_collision_wall_bounce(&HANDLE_CONSOLE);
+            player1_collision.detect_collision_wall_stop(&HANDLE_CONSOLE);
+            player2_collision.detect_collision_wall_stop(&HANDLE_CONSOLE);
 
             ball_collision.detect_collision_wall_bounce(&HANDLE_CONSOLE);
             ball_collision.detect_collision_player_bounce(&player_1);
             ball_collision.detect_collision_player_bounce(&player_2);
 
             // Game Logic
-            if(ball_collision.detect_collision_wall_identify(&HANDLE_CONSOLE) == 12){PLAYER_2_SCORE++;}
-            if(ball_collision.detect_collision_wall_identify(&HANDLE_CONSOLE) == 11){PLAYER_1_SCORE++;}
+            if(ball_collision.detect_collision_wall_identify(&HANDLE_CONSOLE) == 12){
+                PLAYER_2_SCORE++;
+                ball.set_gameobject_xpos(HANDLE_CONSOLE.return_int_window_width()/2-2);
+                ball.set_gameobject_ypos(10.0f);
+                ball.set_gameobject_velocity_xaxis(1.20f);
+            }
+            if(ball_collision.detect_collision_wall_identify(&HANDLE_CONSOLE) == 11){
+                PLAYER_1_SCORE++;
+                ball.set_gameobject_xpos(HANDLE_CONSOLE.return_int_window_width()/2-2);
+                ball.set_gameobject_ypos(10.0f);
+                ball.set_gameobject_velocity_xaxis(-1.20f);
+            }
 
             std::string scoreboard_player_1 = "Player 1: " + std::to_string(PLAYER_1_SCORE);
             std::string scoreboard_player_2 = "Player 2: " + std::to_string(PLAYER_2_SCORE);
